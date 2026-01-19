@@ -1,12 +1,4 @@
-version: '3.8'
 services:
-  frontend:
-    build: ./client # Path to your React folder
-    ports:
-      - "3000:3000"
-    depends_on:
-      - app
-
   app:
     build: ./server
     ports:
