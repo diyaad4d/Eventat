@@ -10,13 +10,21 @@ app.use(cors());
 app.use(express.json());
 
 // database connection :
+// const pool = new Pool({
+//     user: process.env.DB_USER,
+//     password: process.env.DB_PASSWORD,
+//     host: process.env.DB_HOST,
+//     port: process.env.DB_PORT,
+//     database: process.env.DB_NAME
+// });
+
 const pool = new Pool({
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    database: process.env.DB_NAME
+    connectionString: process.env.DATABASE_URL, // This reads the long URL from .env
+    ssl: {
+        rejectUnauthorized: false // This fixes the "SSL" error for Neon
+    }
 });
+
 pool.connect()
     .then(() => console.log('Connected to PostgreSQL Database!'))
     .catch(err => console.error('Database Connection Error:', err.stack));
