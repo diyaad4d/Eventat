@@ -19,9 +19,9 @@ app.use(express.json());
 // });
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // This reads the long URL from .env
+    connectionString: process.env.DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false // This fixes the "SSL" error for Neon
+        rejectUnauthorized: false
     }
 });
 
