@@ -23,7 +23,7 @@ function Services() {
         setUser(storedUser);
 
 
-        axios.get('http://localhost:5000/api/services')
+        axios.get('https://eventat.onrender.com/api/services')
             .then(res => setServices(res.data))
             .catch(err => console.error("Error fetching services:", err));
     }, []);
@@ -43,7 +43,7 @@ function Services() {
         if (!eventDate) return alert("Please select a date for your event.");
 
         try {
-            await axios.post('http://localhost:5000/api/bookings', {
+            await axios.post('https://eventat.onrender.com/api/bookings', {
                 customer_id: user.user_id,
                 service_id: selectedService.service_id,
                 event_date: eventDate,
