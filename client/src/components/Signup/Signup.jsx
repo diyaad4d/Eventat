@@ -21,7 +21,7 @@ function Signup() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('https://eventat.onrender.com/api/register', formData);
+            await axios.post('https://eventat-backend.onrender.com/api/register', formData);
             alert('Account Created Successfully! Please Login.');
             navigate('/login');
         } catch (err) {
