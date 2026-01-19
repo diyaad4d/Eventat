@@ -1,6 +1,3 @@
-# Eventat CI/CD Pipeline - Functional Workflow
-# This workflow handles: Build, Test, and Docker Image Push
-# Purpose: Demonstrates FUNCTIONAL requirements
 
 name: Build, Test & Deploy
 
