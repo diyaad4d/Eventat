@@ -1,6 +1,5 @@
 version: '3.8'
 services:
-  # PostgreSQL Database
   db:
     image: postgres:15
     container_name: eventat_db
@@ -12,31 +11,5 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  # Express.js Server
-  server:
-    build: ./server
-    container_name: eventat_server
-    ports:
-      - "5000:5000"
-    environment:
-      PORT: 5000
-      DB_USER: admin
-      DB_PASSWORD: password123
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: eventat_db
-    depends_on:
-      - db
-
-  # React Client
-  client:
-    build: ./client
-    container_name: eventat_client
-    ports:
-      - "80:80"
-    depends_on:
-      - server
-
 volumes:
   postgres_data:
