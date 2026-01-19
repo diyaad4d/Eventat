@@ -1,5 +1,21 @@
 version: '3.8'
 services:
+  frontend:
+    build: ./client # Path to your React folder
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
+
+  app:
+    build: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgres://admin:password123@db:5432/eventat_db
+    depends_on:
+      - db
+
   db:
     image: postgres:15
     container_name: eventat_db
@@ -11,5 +27,6 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
 volumes:
   postgres_data:
