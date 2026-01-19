@@ -2,9 +2,9 @@ name: Eventat CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "production" ]
+    pull_request:
+      branches: [ "main", "production" ]
 
 jobs:
   build-and-test:
