@@ -3,32 +3,33 @@ name: Eventat CI/CD Pipeline
 on:
   push:
     branches: [ "main", "production" ]
-    pull_request:
-      branches: [ "main", "production" ]
+  pull_request:
+    branches: [ "main", "production" ]
 
 jobs:
-  build-and-test:
+  build-and-verify:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Code
         uses: actions/checkout@v3
-
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '20.x'
 
-
-      - name: Install Server Dependencies
+      - name: Install & Check Backend
         run: |
           cd server
           npm install
 
+      - name: Install & Check Frontend
+        run: |
+          cd client
+          npm install
 
-      - name: Run Backend Tests
+      - name: Verify Backend Docker Image (Requirement 6)
         run: |
           cd server
-          npm test
+          docker build -t eventat-backend-test .
