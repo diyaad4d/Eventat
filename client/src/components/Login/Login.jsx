@@ -14,7 +14,7 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post('https://eventat-backend.onrender.com/api', { email, password });
+            const res = await axios.post('https://eventat-backend.onrender.com/api/login', { email, password });
 
 
             localStorage.setItem('user', JSON.stringify(res.data));
