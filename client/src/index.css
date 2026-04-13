@@ -1,0 +1,365 @@
+/* ── Google Fonts ──────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Tailwind CSS v4 ───────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ── Brand Design Tokens (v4 @theme = replaces tailwind.config.js) ── */
+@theme {
+  /* Colors */
+  --color-gold:         #C9A24D;
+  --color-gold-light:   #E8C97A;
+  --color-gold-dark:    #A07830;
+  --color-hero-blue:    #CEDBE2;
+  --color-dark:         #2C2C2C;
+  --color-dark-soft:    #333333;
+  --color-surface:      #F9F9F9;
+
+  /* Font */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-card:        0 2px 16px 0 rgba(44, 44, 44, 0.08);
+  --shadow-card-hover:  0 8px 32px 0 rgba(201, 162, 77, 0.18);
+
+  /* Border Radius */
+  --radius-xl:  1rem;
+  --radius-2xl: 1.5rem;
+}
+
+/* ── Reference so @apply can resolve utilities in this file ── */
+@reference "tailwindcss";
+
+
+/* ============================================================
+   EVENTAT — Global Design System
+   Brand palette, custom properties & base styles
+   ============================================================ */
+
+:root {
+  /* --- Brand Colors --- */
+  --color-gold:        #C9A24D;
+  --color-gold-light:  #E8C97A;
+  --color-gold-dark:   #A07830;
+
+  --color-hero-blue:   #CEDBE2;
+
+  --color-dark:        #2C2C2C;
+  --color-dark-soft:   #333333;
+
+  --color-surface:     #F9F9F9;
+  --color-surface-alt: #FFFFFF;
+
+  /* --- Semantic Colors --- */
+  --color-success:  #22C55E;
+  --color-error:    #EF4444;
+  --color-warning:  #F59E0B;
+  --color-info:     #3B82F6;
+
+  /* --- Typography --- */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* --- Shadows --- */
+  --shadow-card:       0 2px 16px 0 rgba(44, 44, 44, 0.08);
+  --shadow-card-hover: 0 8px 32px 0 rgba(201, 162, 77, 0.18);
+  --shadow-modal:      0 24px 64px 0 rgba(44, 44, 44, 0.24);
+
+  /* --- Border Radius --- */
+  --radius-sm:   0.375rem;
+  --radius-md:   0.625rem;
+  --radius-lg:   1rem;
+  --radius-xl:   1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Transitions --- */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- Z-Index Scale --- */
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+}
+
+/* ============================================================
+   BASE RESETS & GLOBAL STYLES
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+  color: var(--color-dark);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================================
+   COMPONENT LAYER — Eventat reusable component CSS classes
+   (uses plain CSS so @apply isn't needed — v4 safe)
+   ============================================================ */
+
+@layer components {
+  /* ── Buttons ─────────────────────────────────────────────── */
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: var(--color-gold);
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-fast),
+                box-shadow var(--transition-fast),
+                transform var(--transition-fast);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-gold-dark);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Secondary (Dark) */
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: var(--color-dark);
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-dark-soft);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary:focus-visible {
+    outline: 2px solid var(--color-dark);
+    outline-offset: 2px;
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Outline */
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gold);
+    background-color: transparent;
+    border: 2px solid var(--color-gold);
+    cursor: pointer;
+    transition: background-color var(--transition-fast),
+                color var(--transition-fast);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background-color: var(--color-gold);
+    color: #ffffff;
+  }
+
+  .btn-outline:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Ghost */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-dark);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background-color: rgba(44, 44, 44, 0.06);
+  }
+
+  /* ── Card ────────────────────────────────────────────────── */
+
+  .card {
+    border-radius: 1rem;
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* ── Form input ──────────────────────────────────────────── */
+
+  .input-base {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    background-color: #ffffff;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: var(--color-dark);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    outline: none;
+  }
+
+  .input-base::placeholder {
+    color: #9ca3af;
+  }
+
+  .input-base:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px rgba(201, 162, 77, 0.15);
+  }
+
+  .input-base:disabled {
+    background-color: #f9fafb;
+    cursor: not-allowed;
+  }
+
+  /* ── Badge ───────────────────────────────────────────────── */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+/* ============================================================
+   UTILITY LAYER — Eventat-specific helpers
+   ============================================================ */
+
+@layer utilities {
+  /* Gold gradient text */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold), var(--color-gold-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glassmorphism panel */
+  .glass {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Shimmer animation for skeleton loaders */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #e8e8e8 25%,
+      #f5f5f5 50%,
+      #e8e8e8 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+/* ============================================================
+   KEYFRAME ANIMATIONS
+   ============================================================ */
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Animation utility classes */
+.animate-fade-in  { animation: fadeIn  var(--transition-base) forwards; }
+.animate-slide-up { animation: slideUp var(--transition-slow) forwards; }
+.animate-scale-in { animation: scaleIn var(--transition-fast) forwards; }
+
+/* ============================================================
+   SCROLLBAR STYLING
+   ============================================================ */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-gold-light); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }
+
+/* ============================================================
+   SELECTION COLOR
+   ============================================================ */
+
+::selection {
+  background-color: var(--color-gold-light);
+  color: var(--color-dark);
+}
