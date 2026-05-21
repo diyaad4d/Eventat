@@ -7,7 +7,9 @@ import heroBg from '../../assets/Hero.jpg';
 import weddingImg from '../../assets/Wedding.png';
 import graduationImg from '../../assets/Graduation.jpg';
 import eventsImg from '../../assets/Events.jpg';
-import genderImg from '../../assets/Gender.jpg';
+import birthdayImg from '../../assets/Gender.jpg'; // asset kept, label updated
+
+import Button from '../ui/Button';
 
 function Home() {
     const [user, setUser] = useState(null);
@@ -39,7 +41,9 @@ function Home() {
 
     return (
         <div style={{ fontFamily: 'Arial, sans-serif' }}>
-
+            <Button variant="primary" size="md">My Custom Button</Button>
+            <br />
+            <br />
             {/*  NAVBAR*/}
             <nav style={navbarStyle}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '1px' }}>EVENTAT</div>
@@ -139,12 +143,12 @@ function Home() {
                         </button>
                     </div>
 
-                    {/* 4. GENDER REVEAL*/}
+                    {/* 4. MILESTONE BIRTHDAYS*/}
                     <div style={{ position: 'relative', borderRadius: '15px', overflow: 'hidden', gridColumn: '1 / span 2' }}>
-                        <img src={genderImg} alt="Gender Reveal" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={birthdayImg} alt="Milestone Birthdays" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <div style={{ position: 'absolute', top: '20px', left: '20px' }}>
                             <h3 style={{ color: '#333', fontSize: '1.8rem', margin: 0, fontFamily: 'serif' }}>
-                                PLAN YOUR<br />GENDER REVEAL<br />PARTY
+                                PLAN YOUR<br />MILESTONE<br />BIRTHDAY
                             </h3>
                         </div>
                     </div>

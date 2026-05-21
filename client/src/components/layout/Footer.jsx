@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Facebook, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Globe, Share2, Users, ExternalLink, Mail, Phone, MapPin } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
 //  Footer
@@ -8,23 +8,23 @@ import { Instagram, Twitter, Facebook, Linkedin, Mail, Phone, MapPin } from 'luc
 const LINKS = {
   platform: [
     { label: 'Browse Services', to: '/Services' },
-    { label: 'How It Works',    to: '/how-it-works' },
-    { label: 'Event Types',     to: '/Services' },
+    { label: 'How It Works', to: '/how-it-works' },
+    { label: 'Event Types', to: '/Services' },
     { label: 'Become a Vendor', to: '/signup' },
   ],
   support: [
-    { label: 'Help Center',     to: '/help' },
-    { label: 'Contact Us',      to: '/contact' },
-    { label: 'Privacy Policy',  to: '/privacy' },
-    { label: 'Terms of Service',to: '/terms' },
+    { label: 'Help Center', to: '/help' },
+    { label: 'Contact Us', to: '/contact' },
+    { label: 'Privacy Policy', to: '/privacy' },
+    { label: 'Terms of Service', to: '/terms' },
   ],
 };
 
 const SOCIALS = [
-  { icon: <Instagram size={18} />, label: 'Instagram', href: '#' },
-  { icon: <Facebook  size={18} />, label: 'Facebook',  href: '#' },
-  { icon: <Twitter   size={18} />, label: 'Twitter',   href: '#' },
-  { icon: <Linkedin  size={18} />, label: 'LinkedIn',  href: '#' },
+  { icon: <Globe size={18} />, label: 'Instagram', href: '#' },
+  { icon: <Users size={18} />, label: 'Facebook', href: '#' },
+  { icon: <Share2 size={18} />, label: 'Twitter', href: '#' },
+  { icon: <ExternalLink size={18} />, label: 'LinkedIn', href: '#' },
 ];
 
 function FooterLinkGroup({ title, links }) {
@@ -89,7 +89,7 @@ function Footer() {
 
           {/* Link groups */}
           <FooterLinkGroup title="Platform" links={LINKS.platform} />
-          <FooterLinkGroup title="Support"  links={LINKS.support} />
+          <FooterLinkGroup title="Support" links={LINKS.support} />
 
           {/* Newsletter column */}
           <div>
@@ -142,6 +142,7 @@ function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-gray-500">
             © {year} Eventat. All rights reserved. Built with ❤️ in Jordan.
+            © d4d_Diyaa,Mohmoud,Faisal
           </p>
           <div className="flex items-center gap-5">
             <Link to="/privacy" className="text-xs text-gray-500 hover:text-[var(--color-gold-light)] transition-colors">

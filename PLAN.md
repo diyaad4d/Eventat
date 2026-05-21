@@ -67,7 +67,7 @@
 **Booking & Planning:**
 - ❌ Cart system (PDF explicitly shows a cart page for multi-service selection)
 - ❌ Event Plan builder (customer can build an event with multiple services)
-- ❌ Event type selection (Wedding, Graduation, Gender Reveal, Corporate, General)
+- ❌ Event type selection (Wedding, Graduation, Milestone Birthdays, Corporate, General)
 - ❌ Booking status flow (pending → accepted/rejected by vendor)
 - ❌ Booking cancellation
 - ❌ Booking history / order history page
@@ -120,7 +120,7 @@ The PDF defines a rich schema. The current `server/index.js` only uses 3 tables 
 |---|---|
 | `customer_profile` | Extended customer data (address, city) |
 | `vendor_profile` | Company info, logo, registration status, admin approval |
-| `event_type` | Wedding, Graduation, Gender Reveal, Corporate, etc. |
+| `event_type` | Wedding, Graduation, Milestone Birthdays, Corporate, etc. |
 | `subcategory` | Sub-categorization under main categories (Hotels under Venue) |
 | `service_image` | Multiple images per service |
 | `event_plan_item` | Individual service items within an event plan (the "cart") |
@@ -336,7 +336,7 @@ Transform from basic card selection to a premium, full-screen experience:
 #### Step 2.1 — Redesign Home Hero Section
 - Fix the existing full-viewport hero
 - Replace static button text "Plan Your Graduation Party" with a **smart search bar** centered in the hero:
-  - Dropdown: event type (Wedding, Graduation, Gender Reveal, Corporate, General)
+  - Dropdown: event type (Wedding, Graduation, Milestone Birthdays, Corporate, General)
   - Input: "What are you looking for?" (service title / vendor name)
   - Date picker: event date
   - "Search" gold button → navigates to `/services` with query params populated
@@ -367,7 +367,7 @@ And a separate three-step flow for Vendors:
 3. 💰 Grow your business
 
 #### Step 2.5 — Build "Event Type Showcase" Section
-Visual cards for each event type (Wedding, Graduation, Gender Reveal, Corporate):
+Visual cards for each event type (Wedding, Graduation, Milestone Birthdays, Corporate):
 - Each card: atmospheric image, event name, "Plan This Event" CTA button
 - Clicking navigates to `/services?event_type=wedding`
 
@@ -391,7 +391,7 @@ Mobile: filters collapse into a slide-up drawer triggered by a "Filters" button.
 #### Step 3.2 — Build the Filter Sidebar
 Implement all filters visible in the PDF wireframes:
 - **Search bar** at the top — free-text search
-- **Event Type** — radio group (Wedding, Graduation, Gender Reveal, Corporate, General)
+- **Event Type** — radio group (Wedding, Graduation, Milestone Birthdays, Corporate, General)
 - **Category** — checkbox list with icons (Venue, Catering, Photography, Entertainment, Decoration, Transport, Fireworks, Accommodation)
 - **Subcategory** — dynamically renders based on selected category (e.g., if Venue: Hotels, Halls, Farms, Indoor, Outdoor, Pool, Parking, View)
 - **Price Range** — dual-handle range slider (0 JOD — 5,000 JOD)
@@ -481,7 +481,7 @@ All pages under `/customer/*`. Wrapped in `DashboardLayout` with sidebar navigat
 The **Event Plan Builder** — the core product feature from the PDF:
 - List of the customer's event plans (cards showing: event type, date, location, status, estimated total cost, number of services added)
 - "Create New Event Plan" modal:
-  - Event Type dropdown (Wedding, Graduation, Gender Reveal, Corporate, General)
+  - Event Type dropdown (Wedding, Graduation, Milestone Birthdays, Corporate, General)
   - Event Name / Title
   - Event Date
   - Estimated Guest Count
@@ -737,7 +737,7 @@ CREATE TABLE vendor_profiles (
 -- EVENT TYPES
 CREATE TABLE event_types (
     event_type_id SERIAL PRIMARY KEY,
-    name          VARCHAR(80) NOT NULL,   -- 'Wedding', 'Graduation', 'Gender Reveal', 'Corporate', 'General'
+    name          VARCHAR(80) NOT NULL,   -- 'Wedding', 'Graduation', 'Milestone Birthdays', 'Corporate', 'General'
     description   TEXT,
     is_active     BOOLEAN DEFAULT TRUE
 );
@@ -881,7 +881,7 @@ CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
 Create `server/seeds/seed.js`:
 - Insert 5 categories (Venue, Catering, Photography, Entertainment, Decoration)
 - Insert subcategories for each
-- Insert 5 event types (Wedding, Graduation, Gender Reveal, Corporate, General)
+- Insert 5 event types (Wedding, Graduation, Milestone Birthdays, Corporate, General)
 - Insert 3 payment methods (Cash on Delivery, Credit Card, CliQ)
 - Insert 2 test vendor users + vendor_profiles
 - Insert 10 test services across categories with realistic Jordanian data

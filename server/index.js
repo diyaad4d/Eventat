@@ -9,26 +9,52 @@ const app=express();
 app.use(cors());
 app.use(express.json());
 
-// database connection :
-// const pool = new Pool({
-//     user: process.env.DB_USER,
-//     password: process.env.DB_PASSWORD,
-//     host: process.env.DB_HOST,
-//     port: process.env.DB_PORT,
-//     database: process.env.DB_NAME
-// });
+// ─────────────────────────────────────────────────────────────
+//  Database connection — pg Pool
+//
+//  SSL strategy:
+//    Cloud providers (Neon, Render, Supabase, Railway …) require
+//    SSL but use self-signed certs, so rejectUnauthorized must be
+//    false. We enable SSL whenever the DATABASE_URL signals it:
+//      • hostname contains a known cloud keyword, OR
+//      • the URL includes ?sslmode= / ?ssl=true params
+//    Local connections (localhost / 127.0.0.1) skip SSL entirely.
+// ─────────────────────────────────────────────────────────────
+
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+// Detect cloud hosts by hostname keywords common across providers
+const CLOUD_KEYWORDS = ['neon.tech', 'render.com', 'supabase.co', 'railway.app', 'amazonaws.com', 'azure.com'];
+const isLocal = DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1');
+const hasCloudHost = CLOUD_KEYWORDS.some((kw) => DATABASE_URL.includes(kw));
+const hasSslParam  = /[?&]ssl(mode)?=/i.test(DATABASE_URL);
+const useSSL = !isLocal && (hasCloudHost || hasSslParam);
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // Only use SSL if connecting to Neon or Render
-    ssl: process.env.DATABASE_URL.includes('neon.tech')
-        ? { rejectUnauthorized: false }
-        : false
+    connectionString: DATABASE_URL,
+    ssl: useSSL ? { rejectUnauthorized: false } : false,
+    // Keep idle connections alive — prevents "connection terminated
+    // unexpectedly" on providers that drop idle sockets after ~5 min.
+    idleTimeoutMillis:    30000,   // release idle clients after 30 s
+    connectionTimeoutMillis: 5000, // fail fast if DB is unreachable
+    max: 10,                       // pool ceiling
 });
 
-pool.connect()
-    .then(() => console.log('Connected to PostgreSQL Database!'))
-    .catch(err => console.error('Database Connection Error:', err.stack));
+// ── Guard against idle-client crashes ─────────────────────────
+//    Without this listener, an unexpected termination on a pooled
+//    client becomes an unhandled 'error' event that kills the process.
+pool.on('error', (err) => {
+    console.error('[pool] Unexpected error on idle client:', err.message);
+    // Do NOT re-throw — let the pool recover on the next query.
+});
+
+// ── Startup health-check ───────────────────────────────────────
+//    We do a lightweight query instead of pool.connect() so the
+//    client is always properly released back to the pool.
+pool.query('SELECT 1')
+    .then(() => console.log('[db] Connected to PostgreSQL ✓'))
+    .catch((err) => console.error('[db] Connection error:', err.message));
+
 
 
 

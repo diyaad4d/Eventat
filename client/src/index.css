@@ -14,6 +14,7 @@
   --color-dark:         #2C2C2C;
   --color-dark-soft:    #333333;
   --color-surface:      #F9F9F9;
+  --color-surface-warm: #FDFAF5;
 
   /* Font */
   --font-sans: 'Inter', system-ui, sans-serif;
@@ -49,6 +50,7 @@
 
   --color-surface:     #F9F9F9;
   --color-surface-alt: #FFFFFF;
+  --color-surface-warm: #FDFAF5;
 
   /* --- Semantic Colors --- */
   --color-success:  #22C55E;
@@ -354,6 +356,19 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-gold-light); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }
+
+/* ── scrollbar-hide utility ──────────────────────────────── */
+/*  Hides the horizontal scrollbar in the Featured Services  */
+/*  strip while keeping native scroll + touch-swipe intact.  */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE / Edge */
+    scrollbar-width: none;     /* Firefox  */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;             /* Chrome / Safari / Opera */
+  }
+}
 
 /* ============================================================
    SELECTION COLOR

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Calendar, ShoppingCart, Bell, User,
   Briefcase, ClipboardList, BarChart2, Store,
@@ -8,30 +8,53 @@ import {
 
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
-import Navbar       from './Navbar';
-import Avatar       from '../ui/Avatar';
-import Badge        from '../ui/Badge';
+import Navbar from './Navbar';
+import Avatar from '../ui/Avatar';
+import Badge from '../ui/Badge';
+
+
+
+
+
+/*   to understand the arc of dashboard :
+
+<DashboardLayout>  (Main Component - Full Screen)
+   │
+   ├── <Navbar />  (Top Navigation Bar)
+   │
+   ├── <Sidebar>   (Outer Framework of the Sidebar Menu)
+   │    │
+   │    └── <SidebarContent>  (Sidebar Content / Menu Items)
+   │         │
+   │         ├── <SidebarLink /> (Link 1: Overview / Dashboard)
+   │         ├── <SidebarLink /> (Link 2: My Bookings / Requests)
+   │         └── Logout Button
+   │
+   └── {children}  (Page content appears here, e.g., Bookings Table / Analytics)
+
+
+*/
 
 // ─────────────────────────────────────────────────────────────
 //  Sidebar configuration per role
 // ─────────────────────────────────────────────────────────────
 
 const CUSTOMER_NAV = [
-  { to: '/customer/dashboard',      icon: <LayoutDashboard size={18} />, label: 'Overview' },
-  { to: '/customer/events',         icon: <Calendar size={18} />,        label: 'My Events' },
-  { to: '/customer/bookings',       icon: <ClipboardList size={18} />,   label: 'My Bookings' },
-  { to: '/customer/cart',           icon: <ShoppingCart size={18} />,    label: 'Cart',           badge: 'cart' },
-  { to: '/customer/notifications',  icon: <Bell size={18} />,            label: 'Notifications' },
-  { to: '/customer/profile',        icon: <User size={18} />,            label: 'My Profile' },
+  { to: '/customer/dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview' },
+  { to: '/customer/events', icon: <Calendar size={18} />, label: 'My Events' },
+  { to: '/customer/bookings', icon: <ClipboardList size={18} />, label: 'My Bookings' },
+  { to: '/customer/cart', icon: <ShoppingCart size={18} />, label: 'Cart', badge: 'cart' },
+  { to: '/customer/notifications', icon: <Bell size={18} />, label: 'Notifications' },
+  { to: '/customer/profile', icon: <User size={18} />, label: 'My Profile' },
 ];
 
 const VENDOR_NAV = [
-  { to: '/vendor/dashboard',    icon: <LayoutDashboard size={18} />, label: 'Overview' },
-  { to: '/vendor/services',     icon: <Briefcase size={18} />,       label: 'My Services' },
-  { to: '/vendor/bookings',     icon: <ClipboardList size={18} />,   label: 'Booking Requests' },
-  { to: '/vendor/analytics',    icon: <BarChart2 size={18} />,       label: 'Analytics' },
-  { to: '/vendor/profile',      icon: <Store size={18} />,           label: 'My Store' },
-  { to: '/vendor/notifications',icon: <Bell size={18} />,            label: 'Notifications' },
+  { to: '/vendor/dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview' },
+  { to: '/vendor/services', icon: <Briefcase size={18} />, label: 'My Services' },
+  { to: '/vendor/bookings', icon: <ClipboardList size={18} />, label: 'Booking Requests' },
+  { to: '/vendor/analytics', icon: <BarChart2 size={18} />, label: 'Analytics' },
+  { to: '/vendor/profile', icon: <Store size={18} />, label: 'My Store' },
+  { to: '/vendor/notifications', icon: <Bell size={18} />, label: 'Notifications' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -39,10 +62,10 @@ const VENDOR_NAV = [
 // ─────────────────────────────────────────────────────────────
 
 function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
-  const { user, logout }   = useAuthStore();
-  const { getItemCount }   = useCartStore();
-  const navigate           = useNavigate();
-  const cartCount          = getItemCount();
+  const { user, logout } = useAuthStore();
+  const { getItemCount } = useCartStore();
+  const navigate = useNavigate();
+  const cartCount = getItemCount();
 
   const navItems = user?.role === 'vendor' ? VENDOR_NAV : CUSTOMER_NAV;
 
@@ -212,8 +235,8 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
 // ─────────────────────────────────────────────────────────────
 
 function DashboardLayout({ children }) {
-  const [collapsed,   setCollapsed]   = useState(false);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
 
   // Close mobile sidebar on route change
@@ -250,6 +273,7 @@ function DashboardLayout({ children }) {
           {/* Page content */}
           <div className="p-4 sm:p-6 lg:p-8">
             {children}
+            <Outlet />
           </div>
         </main>
       </div>

@@ -24,6 +24,14 @@ const useAuthStore = create(
       /** @type {boolean} */
       isAuthenticated: false,
 
+      // // ── State ────────────────────────────────────────────────
+      // /** @type {{ id: number, username: string, email: string, full_name: string, role: 'customer'|'vendor'|'admin', phone?: string, avatar_url?: string } | null} */
+      // user: { full_name: 'Diyaa Daifi', role: 'customer', avatar_url: 'https://i.pravatar.cc/150?img=11' },
+      // /** @type {string | null} */
+      // token: 'fake-token-123',
+      // /** @type {boolean} */
+      // isAuthenticated: true,
+
       // ── Actions ──────────────────────────────────────────────
 
       /**
