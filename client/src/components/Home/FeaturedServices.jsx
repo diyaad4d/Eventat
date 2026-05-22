@@ -291,7 +291,7 @@ function FeaturedServices() {
             aria-label="Featured services"
           >
             {services.map((service) => (
-              <div key={service.id} role="listitem" className="snap-start">
+              <div key={service.id} role="listitem" className="snap-start flex-shrink-0 w-72 sm:w-80">
                 <ServiceCard service={service} />
               </div>
             ))}

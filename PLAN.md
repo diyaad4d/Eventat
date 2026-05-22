@@ -381,24 +381,14 @@ Visual cards for each event type (Wedding, Graduation, Milestone Birthdays, Corp
 
 This is the most critical discovery page. It must be built to a very high standard.
 
-#### Step 3.1 — Build the Services Page Layout
+#### ✅ Step 3.1 — Build the Services Page Layout *(COMPLETE)*
 Two-column layout:
 - **Left sidebar (280px):** All filters
 - **Right main content:** Results grid + sort/count bar
 
 Mobile: filters collapse into a slide-up drawer triggered by a "Filters" button.
 
-#### Step 3.2 — Build the Filter Sidebar
-Implement all filters visible in the PDF wireframes:
-- **Search bar** at the top — free-text search
-- **Event Type** — radio group (Wedding, Graduation, Milestone Birthdays, Corporate, General)
-- **Category** — checkbox list with icons (Venue, Catering, Photography, Entertainment, Decoration, Transport, Fireworks, Accommodation)
-- **Subcategory** — dynamically renders based on selected category (e.g., if Venue: Hotels, Halls, Farms, Indoor, Outdoor, Pool, Parking, View)
-- **Price Range** — dual-handle range slider (0 JOD — 5,000 JOD)
-- **Location / City** — checkbox list (Amman, Zarqa, Irbid, Aqaba, Dead Sea)
-- **Rating** — star filter (4★+, 3★+, Any)
-- **Availability Date** — date picker
-- "Apply Filters" + "Clear All" buttons
+#### ✅ Step 3.2 — Build the Filter Sidebar *(COMPLETE)*
 
 #### Step 3.3 — Build the Services Results Area
 - **Sort bar:** "Showing 24 results" + Sort By dropdown (Recommended, Price: Low-High, Price: High-Low, Highest Rated, Newest)

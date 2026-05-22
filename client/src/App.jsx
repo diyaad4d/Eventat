@@ -17,7 +17,7 @@ import Landing from './pages/public/Landing.jsx';
 import Signup from './pages/public/Signup.jsx';
 import Login from './pages/public/Login.jsx';
 import Home from './pages/public/Home.jsx';
-import Services from './components/Services/Services.jsx';
+import Services from './pages/public/Services.jsx';
 
 // ── Public detail pages ────────────────────────────────────────
 import ServiceDetail from './pages/public/ServiceDetail.jsx';
