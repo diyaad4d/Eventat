@@ -40,13 +40,28 @@ const SUBCATEGORIES = {
   accommodation: ['Hotels', 'Chalets', 'Villas', 'Resorts'],
 };
 
+// FIX 3A — Full Jordan governorates + event/tourism areas
 const CITIES = [
-  { value: 'amman',    label: 'Amman'    },
-  { value: 'zarqa',    label: 'Zarqa'    },
-  { value: 'irbid',    label: 'Irbid'    },
-  { value: 'aqaba',    label: 'Aqaba'    },
-  { value: 'dead-sea', label: 'Dead Sea' },
+  { value: 'amman',        label: 'Amman'              },
+  { value: 'zarqa',        label: 'Zarqa'              },
+  { value: 'irbid',        label: 'Irbid'              },
+  { value: 'aqaba',        label: 'Aqaba'              },
+  { value: 'dead-sea',     label: 'Dead Sea'           },
+  { value: 'petra',        label: 'Petra'              },
+  { value: 'jerash',       label: 'Jerash'             },
+  { value: 'madaba',       label: 'Madaba'             },
+  { value: 'ajloun',       label: 'Ajloun'             },
+  { value: 'salt',         label: 'Al-Salt'            },
+  { value: 'karak',        label: 'Karak'              },
+  { value: 'tafileh',      label: 'Tafileh'            },
+  { value: 'mafraq',       label: 'Mafraq'             },
+  { value: 'balqa',        label: 'Al-Balqa'           },
+  { value: 'wadi-rum',     label: 'Wadi Rum'           },
+  { value: 'sweimeh',      label: 'Sweimeh (Dead Sea)' },
+  { value: 'zara',         label: 'Zara (Dead Sea)'    },
 ];
+
+const CITIES_INITIAL_COUNT = 6;
 
 const RATING_OPTIONS = [
   { value: 4, label: '4★ & above' },
@@ -73,7 +88,7 @@ export const DEFAULT_FILTERS = {
 };
 
 // ─────────────────────────────────────────────────────────────
-//  SectionLabel — small uppercase eyebrow for each filter group
+//  SectionLabel
 // ─────────────────────────────────────────────────────────────
 function SectionLabel({ children }) {
   return (
@@ -186,29 +201,84 @@ function GoldCheckbox({ value, checked, onChange, children }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  PriceRangeTrack — visual min/max slider track
-//  Renders a filled gold track between the two thumb positions
+//  FIX 2 — DualRangeSlider — overlaid range inputs
 // ─────────────────────────────────────────────────────────────
-function PriceRangeTrack({ min, max }) {
-  const leftPct  = ((min - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
-  const rightPct = ((max - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
-
+function DualRangeSlider({ minPrice, maxPrice, handleMinPrice, handleMaxPrice }) {
   return (
-    <div className="relative h-1.5 w-full bg-gray-200 rounded-full my-2" aria-hidden="true">
+    <div className="relative h-5 flex items-center my-3">
+      {/* Track background */}
+      <div className="absolute w-full h-1.5 bg-gray-200 rounded-full" />
       {/* Filled portion */}
       <div
-        className="absolute top-0 bottom-0 bg-[var(--color-gold)] rounded-full"
-        style={{ left: `${leftPct}%`, right: `${100 - rightPct}%` }}
+        className="absolute h-1.5 bg-[var(--color-gold)] rounded-full"
+        style={{
+          left:  `${((minPrice - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100}%`,
+          right: `${100 - ((maxPrice - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100}%`,
+        }}
       />
-      {/* Left thumb dot */}
-      <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-[var(--color-gold)] shadow-sm"
-        style={{ left: `${leftPct}%` }}
+      {/* Min handle */}
+      <input
+        type="range"
+        min={PRICE_MIN}
+        max={PRICE_MAX}
+        step={50}
+        value={minPrice}
+        onChange={handleMinPrice}
+        aria-label="Minimum price"
+        className="absolute w-full appearance-none bg-transparent pointer-events-none
+                   [&::-webkit-slider-thumb]:pointer-events-auto
+                   [&::-webkit-slider-thumb]:appearance-none
+                   [&::-webkit-slider-thumb]:w-5
+                   [&::-webkit-slider-thumb]:h-5
+                   [&::-webkit-slider-thumb]:rounded-full
+                   [&::-webkit-slider-thumb]:bg-white
+                   [&::-webkit-slider-thumb]:border-2
+                   [&::-webkit-slider-thumb]:border-[var(--color-gold)]
+                   [&::-webkit-slider-thumb]:shadow-md
+                   [&::-webkit-slider-thumb]:cursor-grab
+                   [&::-webkit-slider-thumb]:active:cursor-grabbing
+                   [&::-moz-range-thumb]:pointer-events-auto
+                   [&::-moz-range-thumb]:w-5
+                   [&::-moz-range-thumb]:h-5
+                   [&::-moz-range-thumb]:rounded-full
+                   [&::-moz-range-thumb]:bg-white
+                   [&::-moz-range-thumb]:border-2
+                   [&::-moz-range-thumb]:border-[var(--color-gold)]
+                   [&::-moz-range-thumb]:shadow-md
+                   [&::-moz-range-thumb]:cursor-grab"
+        style={{ zIndex: minPrice > PRICE_MAX - 200 ? 5 : 3 }}
       />
-      {/* Right thumb dot */}
-      <div
-        className="absolute top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-[var(--color-gold)] shadow-sm"
-        style={{ right: `${100 - rightPct}%` }}
+      {/* Max handle */}
+      <input
+        type="range"
+        min={PRICE_MIN}
+        max={PRICE_MAX}
+        step={50}
+        value={maxPrice}
+        onChange={handleMaxPrice}
+        aria-label="Maximum price"
+        className="absolute w-full appearance-none bg-transparent pointer-events-none
+                   [&::-webkit-slider-thumb]:pointer-events-auto
+                   [&::-webkit-slider-thumb]:appearance-none
+                   [&::-webkit-slider-thumb]:w-5
+                   [&::-webkit-slider-thumb]:h-5
+                   [&::-webkit-slider-thumb]:rounded-full
+                   [&::-webkit-slider-thumb]:bg-white
+                   [&::-webkit-slider-thumb]:border-2
+                   [&::-webkit-slider-thumb]:border-[var(--color-gold)]
+                   [&::-webkit-slider-thumb]:shadow-md
+                   [&::-webkit-slider-thumb]:cursor-grab
+                   [&::-webkit-slider-thumb]:active:cursor-grabbing
+                   [&::-moz-range-thumb]:pointer-events-auto
+                   [&::-moz-range-thumb]:w-5
+                   [&::-moz-range-thumb]:h-5
+                   [&::-moz-range-thumb]:rounded-full
+                   [&::-moz-range-thumb]:bg-white
+                   [&::-moz-range-thumb]:border-2
+                   [&::-moz-range-thumb]:border-[var(--color-gold)]
+                   [&::-moz-range-thumb]:shadow-md
+                   [&::-moz-range-thumb]:cursor-grab"
+        style={{ zIndex: 4 }}
       />
     </div>
   );
@@ -255,16 +325,18 @@ function StarRatingFilter({ value, onChange }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  FilterSidebar — Step 3.2 (Full implementation)
+//  FilterSidebar — main component
 //
 //  Props:
-//    filters  : object  — current filter state (from Services.jsx)
-//    onChange : fn      — called with (field, value) on every change
-//    onApply  : fn      — called when "Apply Filters" is clicked
-//    onClear  : fn      — called when "Clear All" is clicked
-//    onClose  : fn|null — mobile drawer close button (optional)
+//    filters          : object  — current filter state
+//    onChange         : fn      — (field, value) callback
+//    onClear          : fn      — resets all filters
+//    onClose          : fn|null — mobile drawer close
+//    lockedEventType  : string  — if set, renders event type read-only
 // ─────────────────────────────────────────────────────────────
-function FilterSidebar({ filters, onChange, onClear, onClose }) {
+function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType }) {
+  // FIX 3A — "Show more" toggle for city list
+  const [showAllCities, setShowAllCities] = useState(false);
 
   // ── Derived: which subcategories to show ──────────────────
   const activeSubcats = filters?.categories?.length === 1
@@ -278,7 +350,6 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
       ? current.filter((c) => c !== val)
       : [...current, val];
     onChange('categories', next);
-    // Clear subcategory whenever categories change
     onChange('subcategory', '');
   };
 
@@ -300,7 +371,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
     onChange('maxPrice', v);
   };
 
-  // ── Fallback defaults (when used without parent state) ────
+  // ── Fallback defaults ─────────────────────────────────────
   const f = {
     keyword:     '',
     eventType:   '',
@@ -314,7 +385,6 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
     ...(filters ?? {}),
   };
 
-  // Active filter count for the badge
   const activeCount = [
     f.keyword,
     f.eventType,
@@ -325,6 +395,9 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
     f.rating > 0,
     f.date,
   ].filter(Boolean).length;
+
+  // Cities to display
+  const visibleCities = showAllCities ? CITIES : CITIES.slice(0, CITIES_INITIAL_COUNT);
 
   return (
     <aside
@@ -345,7 +418,6 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
           <h2 className="text-sm font-extrabold text-[var(--color-dark)] tracking-wide">
             Filters
           </h2>
-          {/* Active count badge */}
           {activeCount > 0 && (
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--color-gold)] text-[10px] font-black text-white">
               {activeCount}
@@ -363,7 +435,6 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
             Clear All
           </button>
 
-          {/* Close button — mobile drawer only */}
           {onClose && (
             <button
               type="button"
@@ -412,32 +483,56 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
 
         {/* ── 2. EVENT TYPE ─────────────────────────────────── */}
         <FilterSection title="Event Type" defaultOpen={true}>
-          <SectionLabel>Select one event type</SectionLabel>
-          <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Event type">
-            {EVENT_TYPES.map(({ value, label, emoji }) => (
-              <GoldRadio
-                key={value}
-                name="event_type"
-                value={value}
-                checked={f.eventType === value}
-                onChange={() => onChange('eventType', value)}
-              >
-                <span className="flex items-center gap-1.5">
-                  <span aria-hidden="true">{emoji}</span>
-                  {label}
-                </span>
-              </GoldRadio>
-            ))}
-            {/* "Any" option — clears selection */}
-            <GoldRadio
-              name="event_type"
-              value=""
-              checked={f.eventType === ''}
-              onChange={() => onChange('eventType', '')}
-            >
-              All Events
-            </GoldRadio>
-          </div>
+          {/* FIX 6A — If lockedEventType is set, render read-only display */}
+          {lockedEventType ? (
+            <div style={{ padding: '0.5rem 0' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.875rem', borderRadius: '9999px',
+                background: 'var(--color-gold)', color: '#fff',
+                fontSize: '0.8125rem', fontWeight: 700,
+              }}>
+                {EVENT_TYPES.find(t => t.value === lockedEventType)?.emoji}
+                {EVENT_TYPES.find(t => t.value === lockedEventType)?.label}
+                <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>✓ Selected</span>
+              </span>
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                Go back to{' '}
+                <a href="/services" style={{ color: 'var(--color-gold)' }}>
+                  All Services
+                </a>{' '}
+                to change event type.
+              </p>
+            </div>
+          ) : (
+            <>
+              <SectionLabel>Select one event type</SectionLabel>
+              <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Event type">
+                {EVENT_TYPES.map(({ value, label, emoji }) => (
+                  <GoldRadio
+                    key={value}
+                    name="event_type"
+                    value={value}
+                    checked={f.eventType === value}
+                    onChange={() => onChange('eventType', value)}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden="true">{emoji}</span>
+                      {label}
+                    </span>
+                  </GoldRadio>
+                ))}
+                <GoldRadio
+                  name="event_type"
+                  value=""
+                  checked={f.eventType === ''}
+                  onChange={() => onChange('eventType', '')}
+                >
+                  All Events
+                </GoldRadio>
+              </div>
+            </>
+          )}
         </FilterSection>
 
         {/* ── 3. CATEGORY ───────────────────────────────────── */}
@@ -468,7 +563,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
           </div>
         </FilterSection>
 
-        {/* ── 4. SUBCATEGORY — dynamic, only when 1 cat is selected */}
+        {/* ── 4. SUBCATEGORY — dynamic, only when 1 cat selected */}
         {activeSubcats.length > 0 && (
           <FilterSection title="Subcategory" defaultOpen={true}>
             <SectionLabel>
@@ -502,10 +597,15 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
         <FilterSection title="Price Range (JOD)" defaultOpen={true}>
           <SectionLabel>0 — 5,000 JOD</SectionLabel>
 
-          {/* Visual track */}
-          <PriceRangeTrack min={f.minPrice} max={f.maxPrice} />
+          {/* FIX 2 — Real dual-handle range slider */}
+          <DualRangeSlider
+            minPrice={f.minPrice}
+            maxPrice={f.maxPrice}
+            handleMinPrice={handleMinPrice}
+            handleMaxPrice={handleMaxPrice}
+          />
 
-          {/* Min / Max inputs */}
+          {/* Min / Max number inputs */}
           <div className="flex items-end gap-2 mt-3">
             <div className="flex-1">
               <label
@@ -566,7 +666,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
         <FilterSection title="Location / City" defaultOpen={false}>
           <SectionLabel>Select one or more cities</SectionLabel>
           <div className="flex flex-col gap-1.5" role="group" aria-label="City">
-            {CITIES.map(({ value, label }) => (
+            {visibleCities.map(({ value, label }) => (
               <GoldCheckbox
                 key={value}
                 value={value}
@@ -577,6 +677,24 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
               </GoldCheckbox>
             ))}
           </div>
+
+          {/* FIX 3A — Show more / Show less toggle */}
+          {CITIES.length > CITIES_INITIAL_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAllCities((v) => !v)}
+              className="mt-2 text-xs font-semibold text-[var(--color-gold)] hover:text-[var(--color-gold-dark)] transition-colors flex items-center gap-1"
+            >
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${showAllCities ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+              {showAllCities
+                ? 'Show less'
+                : `Show ${CITIES.length - CITIES_INITIAL_COUNT} more`}
+            </button>
+          )}
         </FilterSection>
 
         {/* ── 7. RATING ─────────────────────────────────────── */}
@@ -619,7 +737,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose }) {
 
       </div>
 
-      {/* Bottom padding so last filter section isn't flush against the edge */}
+      {/* Bottom padding */}
       <div className="shrink-0 h-4" aria-hidden="true" />
 
     </aside>

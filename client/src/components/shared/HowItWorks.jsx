@@ -199,44 +199,7 @@ function StepsPanel({ steps, isCustomerTheme, cta, panelId, tabId }) {
         ))}
       </div>
 
-      {/* CTA strip */}
-      <div
-        className={[
-          'mt-12 flex flex-col sm:flex-row items-center justify-between gap-5',
-          'rounded-2xl px-7 py-5 border',
-          isCustomerTheme
-            ? 'bg-gradient-to-r from-[var(--color-gold)]/8 via-[var(--color-gold)]/4 to-transparent border-[var(--color-gold)]/20'
-            : 'bg-gradient-to-r from-[var(--color-dark)]/6 via-[var(--color-dark)]/3 to-transparent border-[var(--color-dark)]/10',
-        ].join(' ')}
-      >
-        <div className="text-center sm:text-left">
-          <p className="text-sm font-semibold text-[var(--color-dark)]">
-            {cta.headline}
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">{cta.sub}</p>
-        </div>
 
-        <Link
-          to={cta.path}
-          className={[
-            'group inline-flex items-center gap-2 shrink-0',
-            'px-6 py-3 rounded-xl text-sm font-bold text-white',
-            'transition-all duration-200',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-            isCustomerTheme
-              ? 'bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] shadow-[0_4px_14px_rgba(201,162,77,0.3)] hover:shadow-[0_6px_20px_rgba(201,162,77,0.45)] focus-visible:ring-[var(--color-gold)]'
-              : 'bg-[var(--color-dark)] hover:bg-[var(--color-dark-soft)] shadow-[0_4px_14px_rgba(44,44,44,0.2)] hover:shadow-[0_6px_20px_rgba(44,44,44,0.3)] focus-visible:ring-[var(--color-dark)]',
-          ].join(' ')}
-          aria-label={cta.label}
-        >
-          {cta.label}
-          <ArrowRight
-            size={16}
-            className="transition-transform duration-200 group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
-      </div>
     </div>
   );
 }

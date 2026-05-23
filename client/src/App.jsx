@@ -18,6 +18,7 @@ import Signup from './pages/public/Signup.jsx';
 import Login from './pages/public/Login.jsx';
 import Home from './pages/public/Home.jsx';
 import Services from './pages/public/Services.jsx';
+import EventTypePage from './pages/public/EventTypePage.jsx';
 
 // ── Public detail pages ────────────────────────────────────────
 import ServiceDetail from './pages/public/ServiceDetail.jsx';
@@ -121,6 +122,7 @@ function App() {
           {/* ── Public pages (PageLayout with Navbar + Footer) ──── */}
           <Route element={<PageLayout />}>
             <Route path="/home" element={<Home />} />
+            <Route path="/services/:eventType" element={<EventTypePage />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:serviceId" element={<ServiceDetail />} />
             <Route path="/vendors/:vendorId" element={<VendorPublicProfile />} />

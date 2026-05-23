@@ -210,7 +210,7 @@ function AccordionPanel({ event, isActive, onActivate }) {
 
         {/* CTA button */}
         <Link
-          to={`/services?event_type=${event.slug}`}
+          to={`/services/${event.slug}`}
           onClick={(e) => e.stopPropagation()}
           className={[
             'group/cta inline-flex items-center gap-2.5',

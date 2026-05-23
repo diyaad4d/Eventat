@@ -57,13 +57,14 @@ function StarDisplay({ rating, size = 13 }) {
 // ─────────────────────────────────────────────────────────────
 //  ServiceCard — Grid variant (vertical)
 // ─────────────────────────────────────────────────────────────
-function GridCard({ service, badgeVariant, unitLabel }) {
+function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
   const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice } = service;
 
   return (
     <article
       className={[
-        'group w-full bg-white rounded-2xl overflow-hidden',
+        'group w-full bg-white rounded-2xl overflow-hidden h-full flex flex-col',
+        className,
         'shadow-[var(--shadow-card)]',
         'transition-all duration-300 ease-out',
         'hover:-translate-y-1.5 hover:shadow-[var(--shadow-card-hover)]',
@@ -101,7 +102,7 @@ function GridCard({ service, badgeVariant, unitLabel }) {
       </Link>
 
       {/* Card body */}
-      <div className="p-4 flex flex-col gap-2.5">
+      <div className="p-4 flex flex-col gap-2.5 flex-1">
         <Link
           to={`/services/${id}`}
           className="block text-[15px] font-bold text-[var(--color-dark)] leading-snug line-clamp-2 hover:text-[var(--color-gold)] transition-colors duration-200 focus-visible:outline-none focus-visible:text-[var(--color-gold)]"
@@ -116,37 +117,39 @@ function GridCard({ service, badgeVariant, unitLabel }) {
           <span className="text-xs truncate">{location}</span>
         </div>
 
-        <div className="w-full h-px bg-gray-100" aria-hidden="true" />
+        <div className="mt-auto flex flex-col gap-2.5">
+          <div className="w-full h-px bg-gray-100" aria-hidden="true" />
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <StarDisplay rating={rating} />
-            <span className="text-[11px] text-gray-400 font-medium">({reviewCount})</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <StarDisplay rating={rating} />
+              <span className="text-[11px] text-gray-400 font-medium">({reviewCount})</span>
+            </div>
+            <div className="text-right">
+              <span className="text-[11px] text-gray-400 font-medium">From </span>
+              <span className="text-base font-extrabold text-[var(--color-dark)]">
+                {basePrice.toLocaleString()} JOD
+              </span>
+              <span className="text-[10px] text-gray-400 block leading-none">{unitLabel}</span>
+            </div>
           </div>
-          <div className="text-right">
-            <span className="text-[11px] text-gray-400 font-medium">From </span>
-            <span className="text-base font-extrabold text-[var(--color-dark)]">
-              {basePrice.toLocaleString()} JOD
-            </span>
-            <span className="text-[10px] text-gray-400 block leading-none">{unitLabel}</span>
-          </div>
+
+          <Link
+            to={`/services/${id}`}
+            className={[
+              'group/btn mt-1 flex items-center justify-center gap-2',
+              'w-full rounded-xl py-2.5 px-4',
+              'text-sm font-semibold text-white',
+              'bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)]',
+              'transition-all duration-200 ease-out',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold)] focus-visible:ring-offset-1',
+            ].join(' ')}
+            aria-label={`Book ${title}`}
+          >
+            Book Now
+            <ArrowRight size={15} className="transition-transform duration-200 group-hover/btn:translate-x-0.5" aria-hidden="true" />
+          </Link>
         </div>
-
-        <Link
-          to={`/services/${id}`}
-          className={[
-            'group/btn mt-1 flex items-center justify-center gap-2',
-            'w-full rounded-xl py-2.5 px-4',
-            'text-sm font-semibold text-white',
-            'bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)]',
-            'transition-all duration-200 ease-out',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold)] focus-visible:ring-offset-1',
-          ].join(' ')}
-          aria-label={`Book ${title}`}
-        >
-          Book Now
-          <ArrowRight size={15} className="transition-transform duration-200 group-hover/btn:translate-x-0.5" aria-hidden="true" />
-        </Link>
       </div>
     </article>
   );
@@ -156,13 +159,14 @@ function GridCard({ service, badgeVariant, unitLabel }) {
 //  ServiceCard — List variant (horizontal)
 //  image (left 240px fixed) | content (flex-1 right)
 // ─────────────────────────────────────────────────────────────
-function ListCard({ service, badgeVariant, unitLabel }) {
+function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
   const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice } = service;
 
   return (
     <article
       className={[
-        'group flex flex-col sm:flex-row w-full bg-white rounded-2xl overflow-hidden',
+        'group flex flex-col sm:flex-row w-full bg-white rounded-2xl overflow-hidden h-full',
+        className,
         'border border-gray-100',
         'shadow-[var(--shadow-card)]',
         'transition-all duration-300 ease-out',
@@ -278,7 +282,7 @@ function ListCard({ service, badgeVariant, unitLabel }) {
 //  ServiceCard — public export
 //  Delegates to GridCard or ListCard based on viewMode prop.
 // ─────────────────────────────────────────────────────────────
-function ServiceCard({ service, viewMode = 'grid' }) {
+function ServiceCard({ service, viewMode = 'grid', className = '' }) {
   const badgeVariant = CATEGORY_VARIANT_MAP[service.categorySlug] ?? 'gray';
   const unitLabel = {
     per_event:  '/ event',
@@ -288,9 +292,9 @@ function ServiceCard({ service, viewMode = 'grid' }) {
   }[service.pricingUnit] ?? '/ event';
 
   if (viewMode === 'list') {
-    return <ListCard service={service} badgeVariant={badgeVariant} unitLabel={unitLabel} />;
+    return <ListCard service={service} badgeVariant={badgeVariant} unitLabel={unitLabel} className={className} />;
   }
-  return <GridCard service={service} badgeVariant={badgeVariant} unitLabel={unitLabel} />;
+  return <GridCard service={service} badgeVariant={badgeVariant} unitLabel={unitLabel} className={className} />;
 }
 
 export default ServiceCard;

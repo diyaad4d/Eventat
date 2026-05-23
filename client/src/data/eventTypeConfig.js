@@ -1,0 +1,91 @@
+// ─────────────────────────────────────────────────────────────
+//  eventTypeConfig.js — Single source of truth for event types
+//  Used by: EventTypeHub, EventTypePage, and any future component
+// ─────────────────────────────────────────────────────────────
+
+export const EVENT_TYPE_CONFIG = {
+  wedding: {
+    label:       'Wedding',
+    emoji:       '💍',
+    color:       '#C9A24D',
+    darkBg:      '#1a0f09',
+    headline:    'Plan the Wedding of Your Dreams',
+    subline:     'Everything you need for your perfect day — venues, photographers, caterers and more',
+    image:       'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
+    filterCategory: 'venue',
+    checklist: [
+      { icon: '🏛️', text: 'Book your venue (12+ months ahead)' },
+      { icon: '📸', text: 'Reserve your photographer' },
+      { icon: '🍽️', text: 'Arrange catering & menu tasting' },
+      { icon: '💐', text: 'Floral design & decoration' },
+      { icon: '🎵', text: 'Entertainment & music' },
+      { icon: '🚗', text: 'Transport for wedding party' },
+    ],
+    recommendations: ['Venue', 'Photography', 'Catering', 'Decoration', 'Entertainment'],
+  },
+  graduation: {
+    label:       'Graduation',
+    emoji:       '🎓',
+    color:       '#6BA3D6',
+    darkBg:      '#0a1520',
+    headline:    'Celebrate Your Achievement in Style',
+    subline:     'Make your graduation day unforgettable with the perfect venue and services',
+    image:       'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80',
+    filterCategory: 'venue',
+    checklist: [
+      { icon: '🏛️', text: 'Book a celebration venue' },
+      { icon: '📸', text: 'Professional graduation photography' },
+      { icon: '🍽️', text: 'Catering for guests' },
+      { icon: '🎂', text: 'Graduation cake & desserts' },
+      { icon: '🎵', text: 'Entertainment & DJ' },
+      { icon: '🎀', text: 'Decoration & setup' },
+    ],
+    recommendations: ['Venue', 'Photography', 'Catering', 'Decoration', 'Entertainment'],
+  },
+  'milestone-birthdays': {
+    label:       'Milestone Birthdays',
+    emoji:       '🎂',
+    color:       '#C084FC',
+    darkBg:      '#150720',
+    headline:    'Make Every Milestone Unforgettable',
+    subline:     'From intimate gatherings to grand celebrations — find everything you need',
+    image:       'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1600&q=80',
+    filterCategory: 'venue',
+    checklist: [
+      { icon: '🏛️', text: 'Choose the perfect party venue' },
+      { icon: '🎂', text: 'Custom birthday cake' },
+      { icon: '📸', text: 'Event photography' },
+      { icon: '🎵', text: 'Entertainment & activities' },
+      { icon: '🎀', text: 'Themed decoration' },
+      { icon: '🍽️', text: 'Catering & drinks' },
+    ],
+    recommendations: ['Venue', 'Catering', 'Decoration', 'Entertainment', 'Photography'],
+  },
+  corporate: {
+    label:       'Corporate',
+    emoji:       '💼',
+    color:       '#64B5F6',
+    darkBg:      '#060e1a',
+    headline:    'Elevate Your Corporate Events',
+    subline:     'Professional venues and premium services for conferences, launches, and team events',
+    image:       'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1600&q=80',
+    filterCategory: 'venue',
+    checklist: [
+      { icon: '🏢', text: 'Conference or event venue' },
+      { icon: '🎙️', text: 'AV equipment & tech setup' },
+      { icon: '🍽️', text: 'Corporate catering & coffee breaks' },
+      { icon: '📸', text: 'Event photography & videography' },
+      { icon: '🚗', text: 'Executive transport' },
+      { icon: '🎀', text: 'Branding & decoration' },
+    ],
+    recommendations: ['Venue', 'Catering', 'Photography', 'Transport', 'Entertainment'],
+  },
+};
+
+// Ordered list for hub display
+export const EVENT_TYPE_ORDER = [
+  'wedding',
+  'graduation',
+  'milestone-birthdays',
+  'corporate',
+];
