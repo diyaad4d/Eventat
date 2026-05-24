@@ -25,7 +25,7 @@ import ServiceDetail from './pages/public/ServiceDetail.jsx';
 import VendorPublicProfile from './pages/public/VendorPublicProfile.jsx';
 
 // ── Customer dashboard pages ───────────────────────────────────
-import CustomerDashboard from './pages/customer/CustomerDashboard.jsx';
+import CustomerOverview from './pages/customer/CustomerOverview.jsx';
 import CustomerEvents from './pages/customer/CustomerEvents.jsx';
 import CustomerBookings from './pages/customer/CustomerBookings.jsx';
 import CustomerCart from './pages/customer/CustomerCart.jsx';
@@ -122,16 +122,19 @@ function App() {
           {/* ── Public pages (PageLayout with Navbar + Footer) ──── */}
           <Route element={<PageLayout />}>
             <Route path="/home" element={<Home />} />
-            <Route path="/services/:eventType" element={<EventTypePage />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/services/:serviceId" element={<ServiceDetail />} />
+            <Route path="/services/:eventType" element={<EventTypePage />} />
+            
+            {/* services without s */}
+            <Route path="/service/:serviceId" element={<ServiceDetail />} />
+            
             <Route path="/vendors/:vendorId" element={<VendorPublicProfile />} />
           </Route>
 
           {/* ── Customer dashboard (Protected: customer only) ────── */}
           <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+              <Route path="/customer/dashboard" element={<CustomerOverview />} />
               <Route path="/customer/events" element={<CustomerEvents />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
               <Route path="/customer/cart" element={<CustomerCart />} />
