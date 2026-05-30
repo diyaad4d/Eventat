@@ -187,7 +187,7 @@ function AdminLayout({ children }) {
                 rounded-full bg-red-500" />
             </Link>
             {/* Back to site */}
-            <Link to="/"
+            <Link to="/home"
               className="hidden sm:flex items-center gap-2 px-4 py-2 
                 bg-[#0F1117] border border-[#2A2D3A] text-[#8B8FA8] 
                 text-sm font-bold rounded-xl hover:border-[var(--color-gold)] 

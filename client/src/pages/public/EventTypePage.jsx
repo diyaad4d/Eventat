@@ -24,14 +24,7 @@ const SORT_OPTIONS = [
   { value: 'rating',      label: 'Highest Rated'       },
 ];
 
-const CATEGORY_ICONS = {
-  Venue:         '🏛️',
-  Photography:   '📸',
-  Catering:      '🍽️',
-  Decoration:    '🎀',
-  Entertainment: '🎵',
-  Transport:     '🚗',
-};
+
 
 // ─────────────────────────────────────────────────────────────
 //  SkeletonCard
@@ -138,7 +131,7 @@ function EventTypePage() {
 
   return (
     <PageTransition className="min-h-screen bg-[var(--color-surface)]">
-      <HeroBanner cfg={cfg} eventType={eventType} updateFilter={updateFilter} />
+      <HeroBanner cfg={cfg} eventType={eventType} filters={filters} updateFilter={updateFilter} />
       <ChecklistSection cfg={cfg} eventType={eventType} />
       <FilteredServicesSection
         cfg={cfg}
@@ -151,11 +144,9 @@ function EventTypePage() {
       />
       <RecommendationsStrip
         cfg={cfg}
-        onCategorySelect={(cat) => {
-          updateFilter('categories', [cat.toLowerCase()]);
-          setTimeout(() => {
-            document.getElementById('filtered-services')?.scrollIntoView({ behavior: 'smooth' });
-          }, 50);
+        onCategorySelect={(slug) => {
+          updateFilter('categories', [slug]);
+          window.scrollTo({ top: 400, behavior: 'smooth' });
         }}
       />
     </PageTransition>
@@ -166,7 +157,8 @@ function EventTypePage() {
 //  Section A — Hero Banner
 //  Category pill clicks apply filter + smooth-scroll to results
 // ─────────────────────────────────────────────────────────────
-function HeroBanner({ cfg, eventType, updateFilter }) {
+function HeroBanner({ cfg, eventType, filters, updateFilter }) {
+  const isAll = !filters.categories || filters.categories.length === 0;
   return (
     <>
       {/* Float keyframes */}
@@ -291,38 +283,65 @@ function HeroBanner({ cfg, eventType, updateFilter }) {
 
             {/* Category pills — click to filter + scroll */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-              {cfg.recommendations.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => {
-                    updateFilter('categories', [cat.toLowerCase()]);
-                    setTimeout(() => {
-                      document.getElementById('filtered-services')?.scrollIntoView({ behavior: 'smooth' });
-                    }, 50);
-                  }}
-                  style={{
-                    display:        'inline-flex',
-                    alignItems:     'center',
-                    gap:            '0.375rem',
-                    padding:        '0.375rem 0.875rem',
-                    borderRadius:   '9999px',
-                    background:     'rgba(255,255,255,0.12)',
-                    backdropFilter: 'blur(8px)',
-                    border:         '1px solid rgba(255,255,255,0.22)',
-                    color:          '#ffffff',
-                    fontSize:       '0.8125rem',
-                    fontWeight:     600,
-                    cursor:         'pointer',
-                    transition:     'background 200ms ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.22)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
-                >
-                  <span aria-hidden="true">{CATEGORY_ICONS[cat] ?? '✨'}</span>
-                  {cat}
+              <button
+                type="button"
+                onClick={() => {
+                  updateFilter('categories', []);
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
+                }}
+                style={{
+                  display:        'inline-flex',
+                  alignItems:     'center',
+                  gap:            '0.375rem',
+                  padding:        '0.375rem 0.875rem',
+                  borderRadius:   '9999px',
+                  background:     isAll ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(8px)',
+                  border:         '1px solid rgba(255,255,255,0.22)',
+                  color:          '#ffffff',
+                  fontSize:       '0.8125rem',
+                  fontWeight:     600,
+                  cursor:         'pointer',
+                  transition:     'background 200ms ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = isAll ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)'; }}
+              >
+                All
+              </button>
+              {cfg.recommendations.map((cat) => {
+                const isActive = filters.categories?.includes(cat.slug);
+                return (
+                  <button
+                    key={cat.slug}
+                    type="button"
+                    onClick={() => {
+                      updateFilter('categories', [cat.slug]);
+                      window.scrollTo({ top: 400, behavior: 'smooth' });
+                    }}
+                    style={{
+                      display:        'inline-flex',
+                      alignItems:     'center',
+                      gap:            '0.375rem',
+                      padding:        '0.375rem 0.875rem',
+                      borderRadius:   '9999px',
+                      background:     isActive ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
+                      backdropFilter: 'blur(8px)',
+                      border:         '1px solid rgba(255,255,255,0.22)',
+                      color:          '#ffffff',
+                      fontSize:       '0.8125rem',
+                      fontWeight:     600,
+                      cursor:         'pointer',
+                      transition:     'background 200ms ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)'; }}
+                  >
+                  <span aria-hidden="true">{cat.icon ?? '✨'}</span>
+                  {cat.name}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -777,8 +796,13 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
     filters.date,
   ].filter(Boolean).length;
 
-  const totalCount   = services.length;
-  const visibleCards = services.slice(0, visibleN);
+  const activeCategories = filters.categories || [];
+  const filteredMockServices = activeCategories.length === 0
+    ? services 
+    : services.filter(s => activeCategories.includes(s.categorySlug));
+
+  const totalCount   = filteredMockServices.length;
+  const visibleCards = filteredMockServices.slice(0, visibleN);
   const hasMore      = visibleN < totalCount;
 
   return (
@@ -1085,10 +1109,10 @@ function RecommendationsStrip({ cfg, onCategorySelect }) {
         >
           {cfg.recommendations.map((cat) => (
             <RecommendationCard
-              key={cat}
+              key={cat.slug}
               cat={cat}
               accentColor={cfg.color}
-              onClick={() => onCategorySelect(cat)}
+              onClick={() => onCategorySelect(cat.slug)}
             />
           ))}
         </div>
@@ -1099,7 +1123,7 @@ function RecommendationsStrip({ cfg, onCategorySelect }) {
 
 function RecommendationCard({ cat, accentColor, onClick }) {
   const [hovered, setHovered] = useState(false);
-  const icon = CATEGORY_ICONS[cat] ?? '✨';
+  const icon = cat.icon ?? '✨';
 
   return (
     <button
@@ -1148,7 +1172,7 @@ function RecommendationCard({ cat, accentColor, onClick }) {
 
       {/* Label */}
       <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-dark)', lineHeight: 1.2 }}>
-        {cat}
+        {cat.name}
       </span>
 
       {/* Browse cue */}

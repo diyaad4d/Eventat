@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, ChevronRight, Edit2, Trash2, ShieldAlert, X
+  Plus, ChevronRight, Edit2, Trash2, ShieldAlert, X, UploadCloud
 } from 'lucide-react';
 import PageTransition from '../../components/shared/PageTransition';
 import useCategoriesStore from '../../store/categoriesStore';
@@ -348,6 +348,8 @@ function CategoryModal({ category, onSave, onClose }) {
   const [name, setName] = useState(category ? category.name : '');
   const [icon, setIcon] = useState(category ? category.icon : '');
   const [isActive, setIsActive] = useState(category ? category.isActive : true);
+  const [coverImage, setCoverImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(category?.coverImage || null);
   const isEdit = !!category;
 
   useEffect(() => {
@@ -359,8 +361,19 @@ function CategoryModal({ category, onSave, onClose }) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
+      if (previewUrl && !category?.coverImage) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
-  }, [onClose]);
+  }, [onClose, previewUrl, category]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCoverImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -370,63 +383,92 @@ function CategoryModal({ category, onSave, onClose }) {
       name: name.trim(),
       slug: generateSlug(name),
       icon: icon.trim(),
-      isActive
+      isActive,
+      coverImage
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#1A1D27] border border-[#2A2D3A] rounded-2xl w-[calc(100vw-2rem)] sm:w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-[#2A2D3A]">
+    <div className="fixed inset-0 z-[999] flex items-start justify-center pt-10 sm:pt-16 p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg max-h-[80vh] flex flex-col bg-[#1A1D27] border border-[#2A2D3A] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="shrink-0 flex items-center justify-between p-6 border-b border-[#2A2D3A]">
           <h2 className="text-lg font-extrabold text-white">{isEdit ? 'Edit Category' : 'Add New Category'}</h2>
-          <button onClick={onClose} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#8B8FA8] hover:text-white transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#8B8FA8] hover:text-white hover:bg-[#2A2D3A] rounded-full transition-colors"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          
-          <div>
-            <label className="block text-xs font-bold text-[#8B8FA8] uppercase tracking-wider mb-2">Category Name</label>
-            <input 
-              type="text" 
-              required
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Venue, Catering..."
-              className="w-full px-4 py-3 bg-[#0F1117] border border-[#2A2D3A] text-white rounded-xl outline-none focus:border-[var(--color-gold)] transition-colors"
-            />
-            {name && (
-              <p className="text-[11px] text-[#8B8FA8] mt-1.5 ml-1 flex items-center gap-1">
-                Slug: <span className="font-mono text-[var(--color-gold)]/80">{generateSlug(name)}</span>
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#8B8FA8] uppercase tracking-wider mb-2">Icon (Emoji)</label>
-            <input 
-              type="text" 
-              required
-              maxLength={2}
-              value={icon} 
-              onChange={(e) => setIcon(e.target.value)}
-              placeholder="🎵 — paste an emoji"
-              className="w-full px-4 py-3 bg-[#0F1117] border border-[#2A2D3A] text-white rounded-xl outline-none focus:border-[var(--color-gold)] transition-colors text-xl"
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-[#0F1117] border border-[#2A2D3A] rounded-xl">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            
             <div>
-              <p className="text-sm font-bold text-white">Active Status</p>
-              <p className="text-xs text-[#8B8FA8] mt-0.5">Visible to users and vendors</p>
+              <label className="block text-xs font-bold text-[#8B8FA8] uppercase tracking-wider mb-2">Category Name</label>
+              <input 
+                type="text" 
+                required
+                value={name} 
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Venue, Catering..."
+                className="w-full px-4 py-3 bg-[#0F1117] border border-[#2A2D3A] text-white rounded-xl outline-none focus:border-[var(--color-gold)] transition-colors"
+              />
+              {name && (
+                <p className="text-[11px] text-[#8B8FA8] mt-1.5 ml-1 flex items-center gap-1">
+                  Slug: <span className="font-mono text-[var(--color-gold)]/80">{generateSlug(name)}</span>
+                </p>
+              )}
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-              <div className="w-11 h-6 bg-[#2A2D3A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-            </label>
-          </div>
 
-          <div className="flex items-center gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 py-3 min-h-[44px] bg-[#2A2D3A] hover:bg-[#3b3f54] text-white font-bold rounded-xl transition-colors">Cancel</button>
-            <button type="submit" className="flex-1 py-3 min-h-[44px] bg-[var(--color-gold)] hover:bg-[#b08d43] text-[#0F1117] font-extrabold rounded-xl transition-colors">Save Category</button>
+            <div>
+              <label className="block text-xs font-bold text-[#8B8FA8] uppercase tracking-wider mb-2">Icon (Emoji)</label>
+              <input 
+                type="text" 
+                required
+                maxLength={2}
+                value={icon} 
+                onChange={(e) => setIcon(e.target.value)}
+                placeholder="🎵 — paste an emoji"
+                className="w-full px-4 py-3 bg-[#0F1117] border border-[#2A2D3A] text-white rounded-xl outline-none focus:border-[var(--color-gold)] transition-colors text-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#8B8FA8] uppercase tracking-wider mb-2">Cover Image</label>
+              <div className="relative w-full h-32 rounded-xl border-2 border-dashed border-[#2A2D3A] bg-[#0F1117] hover:border-[var(--color-gold)]/50 transition-colors flex flex-col items-center justify-center overflow-hidden cursor-pointer group">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                />
+                {previewUrl ? (
+                  <>
+                    <img src={previewUrl} alt="Cover preview" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                    <div className="relative z-0 flex flex-col items-center text-white drop-shadow-md">
+                      <UploadCloud size={24} className="mb-2" />
+                      <span className="text-sm font-bold">Change Image</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-[#8B8FA8] group-hover:text-white transition-colors">
+                    <UploadCloud size={24} className="mb-2" />
+                    <span className="text-sm font-bold">Click to upload cover image</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-[#0F1117] border border-[#2A2D3A] rounded-xl">
+              <div>
+                <p className="text-sm font-bold text-white">Active Status</p>
+                <p className="text-xs text-[#8B8FA8] mt-0.5">Visible to users and vendors</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+                <div className="w-11 h-6 bg-[#2A2D3A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+
+          </div>
+          <div className="shrink-0 p-6 border-t border-[#2A2D3A] bg-[#1A1D27] flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-6 py-3 min-h-[44px] bg-[#2A2D3A] hover:bg-[#3b3f54] text-white font-bold rounded-xl transition-colors">Cancel</button>
+            <button type="submit" className="px-6 py-3 min-h-[44px] bg-[var(--color-gold)] hover:bg-[#b08d43] text-[#0F1117] font-extrabold rounded-xl transition-colors">Save Category</button>
           </div>
         </form>
       </div>

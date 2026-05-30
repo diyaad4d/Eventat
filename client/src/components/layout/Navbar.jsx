@@ -310,7 +310,7 @@ function Navbar() {
 
             {/* ── Logo ─────────────────────────────────────── */}
             <Link
-              to="/"
+              to="/home"
               className="shrink-0 text-xl font-extrabold tracking-tight text-[var(--color-dark)] hover:opacity-80 transition-opacity"
             >
               EVEN<span className="text-[var(--color-gold)]">TAT</span>

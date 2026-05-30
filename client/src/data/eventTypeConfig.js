@@ -23,7 +23,15 @@ export const EVENT_TYPE_CONFIG = {
       { icon: '💄', text: 'Makeup & beauty for the bridal party' },
       { icon: '💌', text: 'Wedding invitations & prints' },
     ],
-    recommendations: ['Venue', 'Photography & Videography', 'Catering', 'Decoration', 'Music & Entertainment', 'Makeup & Beauty', 'Invitations & Prints'],
+    recommendations: [
+      { name: 'Venue', slug: 'venue', icon: '🏛️' },
+      { name: 'Photography & Videography', slug: 'photography-videography', icon: '📸' },
+      { name: 'Catering', slug: 'catering', icon: '🍽️' },
+      { name: 'Decoration', slug: 'decoration', icon: '🎀' },
+      { name: 'Music & Entertainment', slug: 'music-entertainment', icon: '🎵' },
+      { name: 'Makeup & Beauty', slug: 'makeup-beauty', icon: '💄' },
+      { name: 'Invitations & Prints', slug: 'invitations-prints', icon: '💌' },
+    ],
   },
   graduation: {
     label:       'Graduation',
@@ -42,7 +50,14 @@ export const EVENT_TYPE_CONFIG = {
       { icon: '🎵', text: 'Music & entertainment' },
       { icon: '🎀', text: 'Decoration & setup' },
     ],
-    recommendations: ['Venue', 'Photography & Videography', 'Catering', 'Cakes & Desserts', 'Decoration', 'Music & Entertainment'],
+    recommendations: [
+      { name: 'Venue', slug: 'venue', icon: '🏛️' },
+      { name: 'Photography & Videography', slug: 'photography-videography', icon: '📸' },
+      { name: 'Catering', slug: 'catering', icon: '🍽️' },
+      { name: 'Cakes & Desserts', slug: 'cakes-desserts', icon: '🎂' },
+      { name: 'Decoration', slug: 'decoration', icon: '🎀' },
+      { name: 'Music & Entertainment', slug: 'music-entertainment', icon: '🎵' },
+    ],
   },
   'milestone-birthdays': {
     label:       'Milestone Birthdays',
@@ -61,7 +76,14 @@ export const EVENT_TYPE_CONFIG = {
       { icon: '🎀', text: 'Themed decoration' },
       { icon: '🍽️', text: 'Catering & drinks' },
     ],
-    recommendations: ['Venue', 'Catering', 'Cakes & Desserts', 'Decoration', 'Music & Entertainment', 'Photography & Videography'],
+    recommendations: [
+      { name: 'Venue', slug: 'venue', icon: '🏛️' },
+      { name: 'Catering', slug: 'catering', icon: '🍽️' },
+      { name: 'Cakes & Desserts', slug: 'cakes-desserts', icon: '🎂' },
+      { name: 'Decoration', slug: 'decoration', icon: '🎀' },
+      { name: 'Music & Entertainment', slug: 'music-entertainment', icon: '🎵' },
+      { name: 'Photography & Videography', slug: 'photography-videography', icon: '📸' },
+    ],
   },
   corporate: {
     label:       'Corporate',
@@ -81,7 +103,14 @@ export const EVENT_TYPE_CONFIG = {
       { icon: '🎀', text: 'Branding & decoration' },
       { icon: '💌', text: 'Invitations & branded prints' },
     ],
-    recommendations: ['Venue', 'Event Planning', 'Catering', 'Photography & Videography', 'Transportation', 'Invitations & Prints'],
+    recommendations: [
+      { name: 'Venue', slug: 'venue', icon: '🏢' },
+      { name: 'Event Planning', slug: 'event-planning', icon: '📋' },
+      { name: 'Catering', slug: 'catering', icon: '🍽️' },
+      { name: 'Photography & Videography', slug: 'photography-videography', icon: '📸' },
+      { name: 'Transportation', slug: 'transportation', icon: '🚗' },
+      { name: 'Invitations & Prints', slug: 'invitations-prints', icon: '💌' },
+    ],
   },
 };
 
