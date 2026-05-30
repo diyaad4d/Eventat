@@ -5,10 +5,11 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // ── Layouts ────────────────────────────────────────────────────
 import PageLayout from './components/layout/PageLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
+import AdminLayout from './components/layout/AdminLayout';
 
 // ── Auth ───────────────────────────────────────────────────────
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Toast from './components/ui/Toast';
+import { Toaster } from 'react-hot-toast';
 
 // ── Landing (new — pages/public) ─────────────────────────────
 import Landing from './pages/public/Landing.jsx';
@@ -46,6 +47,8 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminVendors from './pages/admin/AdminVendors.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
 import AdminCategories from './pages/admin/AdminCategories.jsx';
+import AdminAnalytics from './pages/admin/AdminAnalytics.jsx';
+import AdminNotifications from './pages/admin/AdminNotifications.jsx';
 
 // ── 404 ───────────────────────────────────────────────────────
 import NotFound from './pages/NotFound.jsx';
@@ -100,6 +103,8 @@ const queryClient = new QueryClient({
 //  │   /admin/vendors
 //  │   /admin/users
 //  │   /admin/categories
+//  │   /admin/analytics
+//  │   /admin/notifications
 //  │
 //  └─ * → 404 NotFound
 // ─────────────────────────────────────────────────────────────
@@ -124,8 +129,6 @@ function App() {
             <Route path="/home" element={<Home />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:eventType" element={<EventTypePage />} />
-            
-            {/* services without s */}
             <Route path="/service/:serviceId" element={<ServiceDetail />} />
             
             <Route path="/vendors/:vendorId" element={<VendorPublicProfile />} />
@@ -159,11 +162,13 @@ function App() {
 
           {/* ── Admin panel (Protected: admin only) ─────────────── */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route element={<DashboardLayout />}>
+            <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/vendors" element={<AdminVendors />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/categories" element={<AdminCategories />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/notifications" element={<AdminNotifications />} />
             </Route>
           </Route>
 
@@ -177,7 +182,38 @@ function App() {
       <ReactQueryDevtools initialIsOpen={false} />
 
       {/* Global toast notifications */}
-      <Toast />
+      <Toaster
+        position="top-right"
+        gutter={10}
+        containerStyle={{ top: 80 }}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1A1D27',
+            color: '#FFFFFF',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+            borderRadius: '14px',
+            padding: '14px 18px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.20)',
+            maxWidth: '400px',
+            border: '1px solid #2A2D3A',
+          },
+          success: {
+            iconTheme: { primary: '#10B981', secondary: '#FFFFFF' },
+            style: {
+              border: '1px solid rgba(16,185,129,0.30)',
+            },
+          },
+          error: {
+            iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+            style: {
+              border: '1px solid rgba(239,68,68,0.30)',
+            },
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }

@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import {
   SlidersHorizontal, X, ChevronDown, Search,
-  Building2, UtensilsCrossed, Camera, Music2,
-  Flower2, Car, Sparkles, BedDouble,
-  Star,
+  Building2, Palmtree, UtensilsCrossed, Music4, CakeSlice, Camera,
+  CarFront, MapPin, Sparkles, MailOpen,
+  Flower2, Car, Star, Cake, CalendarClock,
+  Palette, Printer, Music2
 } from 'lucide-react';
+import { toastInfo } from '../../utils/toast';
+
+import useCategoriesStore from '../../store/categoriesStore';
 
 // ─────────────────────────────────────────────────────────────
 //  Static filter data
@@ -16,29 +20,6 @@ const EVENT_TYPES = [
   { value: 'corporate',           label: 'Corporate',           emoji: '💼' },
   { value: 'general',             label: 'General',             emoji: '🎉' },
 ];
-
-const CATEGORIES = [
-  { value: 'venue',         label: 'Venue',         Icon: Building2       },
-  { value: 'catering',      label: 'Catering',      Icon: UtensilsCrossed },
-  { value: 'photography',   label: 'Photography',   Icon: Camera          },
-  { value: 'entertainment', label: 'Entertainment', Icon: Music2          },
-  { value: 'decoration',    label: 'Decoration',    Icon: Flower2         },
-  { value: 'transport',     label: 'Transport',     Icon: Car             },
-  { value: 'fireworks',     label: 'Fireworks',     Icon: Sparkles        },
-  { value: 'accommodation', label: 'Accommodation', Icon: BedDouble       },
-];
-
-// Subcategories keyed by parent category value
-const SUBCATEGORIES = {
-  venue:         ['Hotels', 'Halls', 'Farms', 'Indoor', 'Outdoor', 'Pool', 'Parking', 'View'],
-  catering:      ['Buffet', 'Plated Dinner', 'Food Trucks', 'Pastry & Desserts'],
-  photography:   ['Wedding Photography', 'Portrait', 'Drone / Aerial', 'Videography'],
-  entertainment: ['Live Band', 'DJ', 'Comedian', 'Cultural Performers'],
-  decoration:    ['Floral', 'Balloons', 'Lighting', 'Table Setup'],
-  transport:     ['Luxury Cars', 'Buses', 'Motorcycles', 'Valet'],
-  fireworks:     ['Indoor Pyrotechnics', 'Outdoor Shows', 'Cold Sparks'],
-  accommodation: ['Hotels', 'Chalets', 'Villas', 'Resorts'],
-};
 
 // FIX 3A — Full Jordan governorates + event/tourism areas
 const CITIES = [
@@ -335,12 +316,13 @@ function StarRatingFilter({ value, onChange }) {
 //    lockedEventType  : string  — if set, renders event type read-only
 // ─────────────────────────────────────────────────────────────
 function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType }) {
+  const { categories } = useCategoriesStore();
   // FIX 3A — "Show more" toggle for city list
   const [showAllCities, setShowAllCities] = useState(false);
 
   // ── Derived: which subcategories to show ──────────────────
   const activeSubcats = filters?.categories?.length === 1
-    ? SUBCATEGORIES[filters.categories[0]] ?? []
+    ? categories.find(c => c.slug === filters.categories[0])?.subcategories?.filter(s => s.isActive).map(s => s.name) ?? []
     : [];
 
   // ── Helpers ───────────────────────────────────────────────
@@ -428,7 +410,10 @@ function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType })
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onClear}
+            onClick={() => {
+              if (onClear) onClear();
+              toastInfo("All filters cleared.");
+            }}
             className="text-xs font-semibold text-[var(--color-gold-dark)] hover:text-[var(--color-gold)] transition-colors"
             aria-label="Clear all filters"
           >
@@ -539,24 +524,16 @@ function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType })
         <FilterSection title="Category" defaultOpen={true}>
           <SectionLabel>Select one or more</SectionLabel>
           <div className="flex flex-col gap-1.5" role="group" aria-label="Category">
-            {CATEGORIES.map(({ value, label, Icon }) => (
+            {categories.filter(c => c.isActive).map((cat) => (
               <GoldCheckbox
-                key={value}
-                value={value}
-                checked={f.categories.includes(value)}
-                onChange={() => handleCategoryToggle(value)}
+                key={cat.slug}
+                value={cat.slug}
+                checked={f.categories.includes(cat.slug)}
+                onChange={() => handleCategoryToggle(cat.slug)}
               >
                 <span className="flex items-center gap-1.5">
-                  <Icon
-                    size={13}
-                    className={
-                      f.categories.includes(value)
-                        ? 'text-[var(--color-gold)]'
-                        : 'text-gray-400'
-                    }
-                    aria-hidden="true"
-                  />
-                  {label}
+                  <span aria-hidden="true" className={f.categories.includes(cat.slug) ? '' : 'opacity-60'}>{cat.icon}</span>
+                  {cat.name}
                 </span>
               </GoldCheckbox>
             ))}
@@ -567,7 +544,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType })
         {activeSubcats.length > 0 && (
           <FilterSection title="Subcategory" defaultOpen={true}>
             <SectionLabel>
-              Under {CATEGORIES.find((c) => c.value === f.categories[0])?.label}
+              Under {categories.find((c) => c.slug === f.categories[0])?.name}
             </SectionLabel>
             <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Subcategory">
               {activeSubcats.map((sub) => (

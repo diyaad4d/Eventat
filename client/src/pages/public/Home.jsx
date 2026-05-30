@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, Calendar, ChevronDown, ArrowRight } from 'lucide-react';
 
 import Button from '../../components/ui/Button';
 import useAuthStore from '../../store/authStore';
+import useCategoriesStore from '../../store/categoriesStore';
 import FeaturedServices from '../../components/Home/FeaturedServices';
 import HowItWorks from '../../components/shared/HowItWorks';
 import EventTypeShowcase from '../../components/Home/EventTypeShowcase';
+import PageTransition from '../../components/shared/PageTransition';
 import Testimonials from '../../components/Home/Testimonials';
 
 import heroBg from '../../assets/Hero.jpg';
@@ -24,52 +26,52 @@ const EVENT_TYPES = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-//  Mock API data — 8 categories with Unsplash images
+//  Home category styles (images and grid layout mapping)
 //  gridCol / gridRow control the asymmetric desktop layout:
 //    Venue (col-span-2 row-span-2) + Catering (col-span-2) are featured
 // ─────────────────────────────────────────────────────────────
-const MOCK_CATEGORIES = [
-  {
-    id: 1, slug: 'venue', name: 'Venue',
+const HOME_CATEGORY_STYLES = {
+  'venue': {
     img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80',
-    gridCol: 'md:col-span-2', gridRow: 'md:row-span-2',
+    gridCol: 'lg:col-span-2', gridRow: 'lg:row-span-2',
   },
-  {
-    id: 2, slug: 'catering', name: 'Catering',
+  'catering': {
     img: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=800&q=80',
-    gridCol: 'md:col-span-2', gridRow: 'md:row-span-1',
+    gridCol: 'lg:col-span-2', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 3, slug: 'photography', name: 'Photography',
+  'photography-videography': {
     img: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 4, slug: 'entertainment', name: 'Entertainment',
+  'music-entertainment': {
     img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 5, slug: 'decoration', name: 'Decoration',
+  'decoration': {
     img: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 6, slug: 'transport', name: 'Transport',
-    img: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+  'cakes-desserts': {
+    img: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 7, slug: 'accommodation', name: 'Accommodation',
-    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+  'makeup-beauty': {
+    img: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-  {
-    id: 8, slug: 'fireworks', name: 'Fireworks',
-    img: 'https://images.unsplash.com/photo-1498931299472-f7a63a5a1cfa?w=800&q=80',
-    gridCol: 'md:col-span-1', gridRow: 'md:row-span-1',
+  'event-planning': {
+    img: 'https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=800&q=80',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
   },
-];
+  'transportation': {
+    img: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
+  },
+  'invitations-prints': {
+    img: 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=800&q=80',
+    gridCol: 'lg:col-span-1', gridRow: 'lg:row-span-1',
+  },
+};
 
 // ─────────────────────────────────────────────────────────────
 //  Home — Step 2.1 + 2.2
@@ -80,18 +82,63 @@ const MOCK_CATEGORIES = [
 // ─────────────────────────────────────────────────────────────
 //  CategoryGrid sub-component
 // ─────────────────────────────────────────────────────────────
-function CategoryGrid() {
-  const [categories, setCategories] = useState([]);
-  const [isLoading, setIsLoading]   = useState(true);
+function CategoryCard({ name, slug, icon, servicesCount }) {
+  const style = HOME_CATEGORY_STYLES[slug] || {
+    img: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80',
+    gridCol: 'lg:col-span-1',
+    gridRow: 'lg:row-span-1',
+  };
 
-  useEffect(() => {
-    // Simulate GET /api/categories with 1s delay
-    const timer = setTimeout(() => {
-      setCategories(MOCK_CATEGORIES);
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+  return (
+    <Link
+      to={`/services?categories=${slug}`}
+      className={[
+        'group relative rounded-2xl overflow-hidden block min-h-[200px]',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-gold)]/50',
+        style.gridCol, style.gridRow,
+      ].join(' ')}
+      aria-label={`Browse ${name} services`}
+    >
+      <img
+        src={style.img}
+        alt={name}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent group-hover:from-black/80 transition-all duration-300"
+        aria-hidden="true"
+      />
+      <div className="absolute bottom-0 left-0 right-0 p-5">
+        <h3 className="text-white text-lg sm:text-xl font-bold tracking-wide leading-tight flex items-center gap-2">
+          {icon && <span className="text-xl">{icon}</span>}
+          <span>{name}</span>
+        </h3>
+        <div className="flex items-center gap-1.5 mt-1.5 opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+          <span className="text-xs font-semibold text-[var(--color-gold-light)]">
+            Explore {servicesCount > 0 ? `(${servicesCount})` : ''}
+          </span>
+          <ArrowRight size={13} className="text-[var(--color-gold-light)] group-hover:translate-x-1 transition-transform duration-200" />
+        </div>
+      </div>
+      <div
+        className="absolute top-4 left-4 w-2 h-2 rounded-full bg-[var(--color-gold)] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        aria-hidden="true"
+      />
+    </Link>
+  );
+}
+
+function CategoryGrid() {
+  // ⚠️  IMPORTANT: Do NOT call .filter() inside the Zustand selector.
+  // Zustand v5 uses React's useSyncExternalStore internally. If the selector
+  // returns a new array reference on every call (as .filter() does), React
+  // can never cache the snapshot → infinite re-render loop.
+  // Fix: read the stable `categories` reference, then filter in the component body.
+  const categories = useCategoriesStore(state => state.categories);
+  const activeCategories = Array.isArray(categories)
+    ? categories.filter(c => c.isActive)
+    : [];
 
   return (
     <section
@@ -111,74 +158,20 @@ function CategoryGrid() {
           </h2>
         </div>
 
-        {/* ── Skeleton — mirrors grid layout ──────────────── */}
-        {isLoading ? (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]"
-            aria-busy="true"
-            aria-label="Loading categories"
-          >
-            {/* Matches featured + standard card sizes */}
-            <div className="md:col-span-2 md:row-span-2 rounded-2xl bg-gray-200 animate-pulse" />
-            <div className="md:col-span-2 rounded-2xl bg-gray-200 animate-pulse" />
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-gray-200 animate-pulse" />
+        {/* ── Live grid ──────────────────────────────────── */}
+        <div
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[200px]"
+        >
+            {activeCategories?.map((category) => (
+              <CategoryCard
+                key={category.id || category.slug}
+                name={category.name}
+                slug={category.slug}
+                icon={category.icon}
+                servicesCount={category.servicesCount}
+              />
             ))}
           </div>
-        ) : (
-          /* ── Live grid ──────────────────────────────────── */
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]"
-          >
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                to={`/services?category=${cat.slug}`}
-                className={[
-                  'group relative rounded-2xl overflow-hidden block',
-                  'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-gold)]/50',
-                  cat.gridCol, cat.gridRow,
-                ].join(' ')}
-                aria-label={`Browse ${cat.name} services`}
-              >
-                {/* Full-bleed image with zoom */}
-                <img
-                  src={cat.img}
-                  alt={cat.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                />
-
-                {/* Gradient overlay — darkens on hover */}
-                <div
-                  className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent group-hover:from-black/80 transition-all duration-300"
-                  aria-hidden="true"
-                />
-
-                {/* Category name */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <h3 className="text-white text-lg sm:text-xl font-bold tracking-wide leading-tight">
-                    {cat.name}
-                  </h3>
-
-                  {/* Explore arrow — slides up on hover */}
-                  <div className="flex items-center gap-1.5 mt-1.5 opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                    <span className="text-xs font-semibold text-[var(--color-gold-light)]">
-                      Explore
-                    </span>
-                    <ArrowRight size={13} className="text-[var(--color-gold-light)] group-hover:translate-x-1 transition-transform duration-200" />
-                  </div>
-                </div>
-
-                {/* Gold top-left accent pip on hover */}
-                <div
-                  className="absolute top-4 left-4 w-2 h-2 rounded-full bg-[var(--color-gold)] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  aria-hidden="true"
-                />
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
     </section>
   );
@@ -207,13 +200,13 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface)]">
+    <PageTransition className="min-h-screen bg-[var(--color-surface)]">
 
       {/* ══════════════════════════════════════════════════════
           SECTION 1 — HERO + SMART SEARCH BAR
       ══════════════════════════════════════════════════════ */}
       <section
-        className="relative min-h-[70vh] flex flex-col items-center justify-center overflow-hidden"
+        className="relative min-h-[60vh] lg:min-h-[70vh] flex flex-col items-center justify-center overflow-hidden"
         aria-label="Hero search"
       >
         {/* Background image */}
@@ -286,7 +279,7 @@ function Home() {
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
                   aria-label="Event type"
-                  className="w-full appearance-none rounded-xl sm:rounded-full bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 text-sm font-medium text-[var(--color-dark)] pl-9 pr-8 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors"
+                  className="w-full appearance-none rounded-xl sm:rounded-full min-h-[44px] bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 text-sm font-medium text-[var(--color-dark)] pl-9 pr-8 py-3 outline-none cursor-pointer focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors"
                 >
                   {EVENT_TYPES.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
@@ -312,7 +305,7 @@ function Home() {
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="What are you looking for?"
                   aria-label="Search services or vendors"
-                  className="w-full bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 rounded-xl sm:rounded-none text-sm text-[var(--color-dark)] placeholder:text-gray-400 pl-9 pr-4 py-3 outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors"
+                  className="w-full bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 rounded-xl min-h-[44px] sm:rounded-none text-sm text-[var(--color-dark)] placeholder:text-gray-400 pl-9 pr-4 py-3 outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors"
                 />
               </div>
 
@@ -331,7 +324,7 @@ function Home() {
                   onChange={(e) => setDate(e.target.value)}
                   aria-label="Event date"
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full appearance-none bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 rounded-xl sm:rounded-none text-sm text-[var(--color-dark)] pl-9 pr-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors cursor-pointer"
+                  className="w-full appearance-none bg-gray-50 sm:bg-transparent border border-gray-200 sm:border-0 min-h-[44px] rounded-xl sm:rounded-none text-sm text-[var(--color-dark)] pl-9 pr-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 sm:focus:ring-0 transition-colors cursor-pointer"
                 />
               </div>
 
@@ -388,7 +381,7 @@ function Home() {
      
       <Testimonials />
 
-    </div>
+    </PageTransition>
   );
 }
 

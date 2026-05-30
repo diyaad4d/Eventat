@@ -1,0 +1,114 @@
+<USER_REQUEST>
+Read ALL these files completely before changing anything:
+  client/src/pages/vendor/VendorDashboard.jsx
+  client/src/pages/vendor/VendorServices.jsx
+  client/src/pages/vendor/VendorServiceForm.jsx
+  client/src/pages/vendor/VendorBookings.jsx
+
+Also read the sidebar/layout file to find the navigation:
+  client/src/components/vendor/VendorLayout.jsx
+  (or wherever the vendor sidebar nav links are defined)
+
+════════════════════════════════════════
+SHARED DATA LAYER — Create a shared mock store
+════════════════════════════════════════
+
+At the top of VendorDashboard.jsx, replace MOCK_KPI 
+with computed values from INITIAL_REQUESTS:
+
+  const INITIAL_REQUESTS = [ ...keep existing... ];
+
+  // Compute KPIs dynamically from real mock data
+  const computedKPIs = {
+    totalServices:       3,
+    pendingRequests:     INITIAL_REQUESTS.length,
+    confirmedThisMonth:  12,
+    totalRevenue:        INITIAL_REQUESTS.reduce((s, r) => s + r.price, 0),
+  };
+
+Use computedKPIs everywhere instead of MOCK_KPI.
+So when a request is accepted/rejected and removed,
+pendingRequests count updates live.
+
+════════════════════════════════════════
+FIX 1 — VendorDashboard: SaaS-grade redesign
+════════════════════════════════════════
+
+Read VendorDashboard.jsx fully, then apply:
+
+── 1A: KPI Cards — add trend indicators ──
+
+Each KPI card gets:
+- A colored trend badge (↑ +X% vs last month)
+- A mini sparkline bar chart (6 bars, inline SVG)
+- Hover: subtle lift + shadow
+
+Replace the 4 static KPI cards with this pattern:
+
+  const KPI_CONFIG = [
+    {
+      label:    'Active Services',
+      value:    computedKPIs.totalServices,
+      suffix:   '',
+      trend:    '+1',
+      trendPct: '+20%',
+      up:       tr
+<truncated 13624 bytes>
+s-center justify-center 
+    rounded-lg text-gray-400 hover:text-blue-600 
+    hover:bg-blue-50 transition-colors"
+    title="Preview Service"
+    target="_blank"
+  >
+    <Eye size={16} />
+  </Link>
+
+Add Eye import from lucide-react.
+
+════════════════════════════════════════
+FIX 5 — Notification Badge on Sidebar Nav
+════════════════════════════════════════
+
+Find the vendor sidebar/layout component.
+On the "Bookings" nav link, add a live badge
+showing the count of Incoming bookings.
+
+Since we can't share state across pages without
+context, use a static mock count for now:
+
+  const PENDING_COUNT = 2; // matches MOCK_BOOKINGS Incoming count
+
+On the Bookings nav item, add:
+  <span className="ml-auto min-w-[20px] h-5 flex items-center 
+    justify-center rounded-full bg-red-500 text-white 
+    text-[10px] font-black px-1.5">
+    {PENDING_COUNT}
+  </span>
+
+════════════════════════════════════════
+IMPORTS NEEDED (add to each file):
+════════════════════════════════════════
+
+VendorDashboard.jsx:
+  Add: ArrowUpRight, ArrowDownRight, Star, Edit2, TrendingUp
+
+VendorBookings.jsx:
+  Keep existing, ensure Search is imported
+
+VendorServiceForm.jsx:
+  Add: AlertCircle
+
+VendorServices.jsx:
+  Add: Eye, TrendingUp
+
+════════════════════════════════════════
+DO NOT change:
+  - Router config or route paths
+  - index.css or tailwind config
+  - Any non-vendor page
+  - VendorAnalytics.jsx (already done separately)
+════════════════════════════════════════
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-25T12:12:32+03:00.
+</ADDITIONAL_METADATA>

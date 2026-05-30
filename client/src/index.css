@@ -378,3 +378,45 @@ body {
   background-color: var(--color-gold-light);
   color: var(--color-dark);
 }
+
+/* ============================================================
+   STAGGERED CARD ANIMATIONS
+   ============================================================ */
+@keyframes card-fade-in-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.card-stagger {
+  opacity: 0;
+  animation: card-fade-in-up 500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+
+/* ============================================================
+   ACCESSIBILITY UTILITIES
+   ============================================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ── Vendor Detail Modal Animation ── */
+@keyframes vendorModalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+

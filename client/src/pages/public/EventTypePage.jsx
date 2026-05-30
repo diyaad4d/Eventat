@@ -9,6 +9,7 @@ import { EVENT_TYPE_CONFIG } from '../../data/eventTypeConfig';
 import FilterSidebar from '../../components/Services/FilterSidebar';
 import ServiceCard from '../../components/Home/ServiceCard';
 import { MOCK_FEATURED_SERVICES } from '../../components/Home/FeaturedServices';
+import PageTransition from '../../components/shared/PageTransition';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 
 // ─────────────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ function EventTypePage() {
   if (!cfg) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface)]">
+    <PageTransition className="min-h-screen bg-[var(--color-surface)]">
       <HeroBanner cfg={cfg} eventType={eventType} updateFilter={updateFilter} />
       <ChecklistSection cfg={cfg} eventType={eventType} />
       <FilteredServicesSection
@@ -157,7 +158,7 @@ function EventTypePage() {
           }, 50);
         }}
       />
-    </div>
+    </PageTransition>
   );
 }
 
@@ -179,10 +180,8 @@ function HeroBanner({ cfg, eventType, updateFilter }) {
 
       <section
         aria-label={`${cfg.label} hero`}
+        className="h-[220px] md:h-[300px] lg:h-[380px] relative overflow-hidden"
         style={{
-          position:   'relative',
-          height:     '380px',
-          overflow:   'hidden',
           background: cfg.darkBg,
         }}
       >
@@ -493,13 +492,8 @@ function ChecklistSection({ cfg, eventType }) {
             maxHeight:  expanded ? '2000px' : '0px',
             transition: 'max-height 450ms cubic-bezier(0.4, 0, 0.2, 1)',
           }}>
-            {/* Checklist grid */}
-            <div style={{
-              display:             'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap:                 '0.625rem',
-              paddingBottom:       '1rem',
-            }}>
+            {/* Checklist wrapper */}
+            <div className="flex flex-wrap gap-3 pb-4">
               {items.map((item, idx) => {
                 const isChecked = !!checked[idx];
                 const isEditing = editingIdx === idx;
@@ -905,13 +899,18 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(true)}
-                  className="md:hidden relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border-2 border-[var(--color-gold)] text-[var(--color-gold)] hover:bg-[var(--color-gold)] hover:text-white transition-all duration-200"
+                  className={[
+                    'md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
+                    'inline-flex items-center justify-center gap-2',
+                    'min-h-[44px] min-w-[120px] px-6 py-3 rounded-full',
+                    'bg-[var(--color-gold)] text-white shadow-[0_4px_14px_rgba(201,162,77,0.4)]',
+                    'hover:bg-[var(--color-gold-dark)] transition-all duration-200 text-sm font-bold',
+                  ].join(' ')}
                   aria-label="Open filters"
                 >
-                  <SlidersHorizontal size={15} />
-                  Filters
+                  🔍 Filters
                   {activeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-gold)] text-white text-[9px] font-black flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white">
                       {activeCount}
                     </span>
                   )}
@@ -991,8 +990,8 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
                     : 'flex flex-col gap-4'}
                   role="list"
                 >
-                  {visibleCards.map((service) => (
-                    <div key={service.id} role="listitem">
+                  {visibleCards.map((service, index) => (
+                    <div key={service.id} role="listitem" className="card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
                       <ServiceCard service={service} viewMode={viewMode} />
                     </div>
                   ))}

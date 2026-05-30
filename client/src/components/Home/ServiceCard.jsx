@@ -34,21 +34,25 @@ import Badge from '../ui/Badge';
 
 const CATEGORY_VARIANT_MAP = {
 
-  venue:         'blue',
+  'venue':                    'blue',
 
-  catering:      'gold',
+  'event-planning':           'info',
 
-  photography:   'info',
+  'catering':                 'gold',
 
-  entertainment: 'warning',
+  'cakes-desserts':           'warning',
 
-  decoration:    'success',
+  'photography-videography':  'info',
 
-  transport:     'gray',
+  'decoration':               'success',
 
-  accommodation: 'dark',
+  'music-entertainment':      'warning',
 
-  fireworks:     'error',
+  'makeup-beauty':            'error',
+
+  'transportation':           'gray',
+
+  'invitations-prints':       'dark',
 
 };
 
@@ -150,7 +154,7 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
       <Link
 
-        to={`/services/${id}`}
+        to={`/service/${id}`}
 
         className="block relative h-48 overflow-hidden focus:outline-none"
 
@@ -210,7 +214,7 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
         <Link
 
-          to={`/services/${id}`}
+          to={`/service/${id}`}
 
           className="block text-[15px] font-bold text-[var(--color-dark)] leading-snug line-clamp-2 hover:text-[var(--color-gold)] transition-colors duration-200 focus-visible:outline-none focus-visible:text-[var(--color-gold)]"
 
@@ -272,7 +276,7 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
           <Link
 
-            to={`/services/${id}`}
+            to={`/service/${id}`}
 
             className={[
 
@@ -356,7 +360,7 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
       <Link
 
-        to={`/services/${id}`}
+        to={`/service/${id}`}
 
         className="relative block w-full sm:w-[240px] lg:w-[280px] shrink-0 h-48 sm:h-auto overflow-hidden focus:outline-none"
 
@@ -416,7 +420,7 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
             <Link
 
-              to={`/services/${id}`}
+              to={`/service/${id}`}
 
               className="text-[17px] font-extrabold text-[var(--color-dark)] leading-snug line-clamp-2 hover:text-[var(--color-gold)] transition-colors duration-200 focus-visible:outline-none focus-visible:text-[var(--color-gold)]"
 
@@ -516,7 +520,7 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
           <Link
 
-            to={`/services/${id}`}
+            to={`/service/${id}`}
 
             className={[
 

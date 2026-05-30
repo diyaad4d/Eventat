@@ -180,7 +180,7 @@ function FeaturedServices() {
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="flex-shrink-0 w-72 sm:w-80 rounded-2xl bg-gray-100 animate-pulse"
+                className="flex-shrink-0 w-[80vw] sm:w-80 rounded-2xl bg-gray-100 animate-pulse"
                 style={{ height: '360px' }}
               />
             ))}
@@ -291,7 +291,7 @@ function FeaturedServices() {
             aria-label="Featured services"
           >
             {services.map((service) => (
-              <div key={service.id} role="listitem" className="snap-start flex-shrink-0 w-72 sm:w-80">
+              <div key={service.id} role="listitem" className="snap-start flex-shrink-0 w-[80vw] sm:w-80">
                 <ServiceCard service={service} />
               </div>
             ))}

@@ -595,31 +595,37 @@ The publicly visible vendor profile (viewed by customers):
 
 ---
 
-### PHASE 1 — STEP 7: Admin Panel
+### PHASE 1 — STEP 7: Admin Panel (Completed)
 
 All pages under `/admin/*`. Uses a distinct, darker admin layout (no hero images, data-dense).
 
-#### Step 7.1 — Build Admin Dashboard (`/admin/dashboard`)
+#### ✅ Step 7.1 — Build Admin Dashboard (`/admin/dashboard`)
 - Platform-wide stats: Total Users, Total Vendors, Total Bookings, Total Revenue
 - Recent registrations (last 10 users/vendors)
 - Pending vendor approvals alert count with quick link
 
-#### Step 7.2 — Build Vendor Approval Queue (`/admin/vendors`)
+#### ✅ Step 7.2 — Build Vendor Approval Queue (`/admin/vendors`)
 - Table: Vendor Name, Company, Registration Date, Status badge, Actions
 - "Approve" and "Reject" buttons
-- Filter by status: Pending / Approved / Rejected
+- Filter by status: Pending / Approved / Rejected / Updates Pending
 - Clicking a vendor row shows a side panel with their full profile details
+- Support vendor pending changes workflow (review profile updates)
 
-#### Step 7.3 — Build User Management (`/admin/users`)
+#### ✅ Step 7.3 — Build User Management (`/admin/users`)
 - Data table of all users with role, join date, status (active/banned)
 - Search by name or email
 - Ban/Unban user action
 
-#### Step 7.4 — Build Category Management (`/admin/categories`)
+#### ✅ Step 7.4 — Build Category Management (`/admin/categories`)
 - List of all categories with subcategories expandable
 - Add Category button → simple form modal
 - Add Subcategory button per category
 - Edit and delete (soft delete only)
+- Uses Zustand store for global category state
+
+#### ✅ Step 7.5 — Build Analytics & Notifications
+- `AdminAnalytics.jsx`: Revenue charts, Bookings charts, Top performing vendors using Recharts.
+- `AdminNotifications.jsx`: System alerts, vendor approvals, unread tracking.
 
 ---
 
@@ -1382,3 +1388,208 @@ WEEK 15+:   Phase 3                  (Security + AI — When Ready)
 ---
 
 *This roadmap is a living document. Update it as features are completed by checking off tasks and adding new discoveries.*
+
+---
+
+<a name="section-5"></a>
+## SECTION 5 — VENDOR REGISTRATION & PAYMENT BUSINESS REQUIREMENTS
+
+> Added: 2026-05-28. These requirements come from the GP_5.pdf finalized business rules.
+> All UI changes (Signup, AdminVendors, VendorProfile) have been implemented in Phase 1 using mock data.
+> Phase 2 must persist these to the database.
+
+---
+
+### 5.1 — Vendor Types
+
+There are two distinct vendor registration flows.
+
+#### 5.1.1 — Company / Establishment
+- Must provide: **Commercial Register** OR **Occupational License** (PDF/image, max 5 MB)
+- Must provide: **National ID** of the authorized signatory (front + back, image)
+- Company name in the IBAN must match the name in the Commercial Register
+- Registration status is `pending` until an admin manually approves
+
+#### 5.1.2 — Freelancer / Individual
+- Must provide: **National ID** (front + back, image)
+- Full name in the account must match the National ID **exactly**
+- **Portfolio is mandatory** — at least one of: Instagram link, website URL, or portfolio PDF
+- IBAN name must match the National ID name
+
+#### 5.1.3 — Registration Status Flow
+```
+Draft → Submitted → [Admin Review] → Approved | Rejected
+```
+- Vendor can log in but cannot create services until status = `Approved`
+- Admin sees all submitted documents in the vendor detail panel
+- Admin can Approve, Reject, or Revoke at any time
+
+---
+
+### 5.2 — Escrow & Commission Model
+
+#### 5.2.1 — Platform Commission Rate
+- **10%** of every transaction
+- Deducted automatically before vendor payout
+- Never negotiable — fixed platform fee
+
+#### 5.2.2 — Payment Method: Full Online (Escrow)
+- Customer pays **100%** of booking total online at checkout
+- Funds held in the Eventat escrow account
+- On event confirmation (both parties confirm event occurred):
+  - Platform deducts 10% commission
+  - Vendor receives 90% of the booking total
+- If event is cancelled BEFORE the event date:
+  - Customer receives full refund (within cancellation window)
+  - No commission charged
+
+#### 5.2.3 — Payment Method: Cash + Online Deposit
+- Customer pays **20% deposit** online at checkout
+  - This deposit is designed to cover the 10% commission with a buffer
+  - Deposit held in escrow
+- Customer pays remaining **80% cash directly** to the vendor on event day
+- After event confirmation:
+  - Platform takes 10% commission from the escrow deposit
+  - Remaining deposit balance (10%) released to vendor
+- If event is cancelled:
+  - Deposit is forfeited (or partially refunded depending on cancellation policy)
+
+#### 5.2.4 — Edge Cases & Protection Logic
+- **No-show vendor:** Customer dispute opens; escrow held until resolved; vendor may be penalized
+- **No-show customer (cash model):** Vendor keeps the 20% deposit; platform takes 10% from it
+- **Disputed events:** Admin intervenes; escrow frozen until resolution
+- **Fraudulent vendors:** Admin revokes account; pending escrow balance frozen pending investigation
+
+---
+
+### 5.3 — Database Schema Additions Required (Phase 2)
+
+These columns/tables need to be added to implement the above business rules.
+
+#### 5.3.1 — Modifications to `vendor_profiles`
+
+```sql
+ALTER TABLE vendor_profiles
+  ADD COLUMN vendor_type         VARCHAR(20)  NOT NULL DEFAULT 'company'
+                                 CHECK (vendor_type IN ('company', 'freelancer')),
+  ADD COLUMN signatory_name      VARCHAR(120),   -- for companies: authorized signatory
+  ADD COLUMN commercial_register_url TEXT,        -- URL to uploaded document (Cloudinary)
+  ADD COLUMN nid_front_url       TEXT,            -- National ID front photo URL
+  ADD COLUMN nid_back_url        TEXT,            -- National ID back photo URL
+  ADD COLUMN portfolio_instagram VARCHAR(255),    -- freelancer portfolio
+  ADD COLUMN portfolio_website   VARCHAR(255),    -- freelancer portfolio
+  ADD COLUMN portfolio_pdf_url   TEXT,            -- freelancer portfolio PDF URL
+  ADD COLUMN iban                VARCHAR(50),     -- bank account IBAN
+  ADD COLUMN payment_method      VARCHAR(30) NOT NULL DEFAULT 'full_online'
+                                 CHECK (payment_method IN ('full_online', 'cash_deposit')),
+  ADD COLUMN commission_rate     DECIMAL(5,2) NOT NULL DEFAULT 10.00;
+```
+
+#### 5.3.2 — New `escrow_transactions` Table
+
+```sql
+CREATE TABLE escrow_transactions (
+  escrow_id        SERIAL PRIMARY KEY,
+  event_id         INTEGER NOT NULL REFERENCES event_plans(event_id),
+  vendor_id        INTEGER NOT NULL REFERENCES users(user_id),
+  customer_id      INTEGER NOT NULL REFERENCES users(user_id),
+  gross_amount     DECIMAL(10,2) NOT NULL,     -- full payment from customer
+  deposit_amount   DECIMAL(10,2),              -- only for cash_deposit method
+  commission_pct   DECIMAL(5,2) NOT NULL DEFAULT 10.00,
+  commission_amount DECIMAL(10,2) NOT NULL,
+  payout_amount    DECIMAL(10,2) NOT NULL,     -- vendor receives this
+  status           VARCHAR(30) NOT NULL DEFAULT 'held'
+                   CHECK (status IN ('held', 'released', 'refunded', 'disputed', 'frozen')),
+  held_at          TIMESTAMP DEFAULT NOW(),
+  released_at      TIMESTAMP,
+  dispute_reason   TEXT,
+  created_at       TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_escrow_event   ON escrow_transactions(event_id);
+CREATE INDEX idx_escrow_vendor  ON escrow_transactions(vendor_id);
+CREATE INDEX idx_escrow_status  ON escrow_transactions(status);
+```
+
+#### 5.3.3 — New `vendor_documents` Table (optional normalization)
+
+> Alternative to the column approach above. Use if document types may expand.
+
+```sql
+CREATE TABLE vendor_documents (
+  doc_id      SERIAL PRIMARY KEY,
+  vendor_id   INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  doc_type    VARCHAR(50) NOT NULL,   -- 'commercial_register', 'nid_front', 'nid_back', 'portfolio_pdf'
+  file_url    TEXT NOT NULL,
+  uploaded_at TIMESTAMP DEFAULT NOW(),
+  verified_at TIMESTAMP,
+  verified_by INTEGER REFERENCES users(user_id)
+);
+```
+
+---
+
+### 5.4 — API Endpoints to Add (Phase 2 Extension)
+
+#### 5.4.1 — `POST /api/auth/register` Updates
+- Accept new vendor fields: `vendor_type`, `signatory_name`, `iban`, `payment_method`
+- Handle document upload via Cloudinary (multipart form), store URLs
+- Create `vendor_profiles` row with all new fields
+
+#### 5.4.2 — `POST /api/upload/documents`
+- Accepts: `commercial_register`, `nid_front`, `nid_back`, `portfolio_pdf`
+- Uploads to Cloudinary under `eventat/vendor_docs/` folder
+- Returns: `{ field: url }` map
+- Only accessible to authenticated vendor users
+
+#### 5.4.3 — `GET /api/admin/vendors/pending` Updates
+- Include document URLs, payment method, IBAN (redacted), vendor_type
+
+#### 5.4.4 — `GET /api/vendors/me/payment`
+- Returns: payment method, masked IBAN, commission rate, escrow balance, pending payouts
+- Restricted to authenticated vendor
+
+#### 5.4.5 — `POST /api/vendors/me/payment/change-request`
+- Creates an admin notification to review the payment method change
+- Does NOT change the payment method directly (admin action required)
+
+#### 5.4.6 — `POST /api/escrow/release/:escrowId` (Admin only)
+- Marks escrow as `released`
+- Triggers payout to vendor IBAN (or flags for manual bank transfer)
+
+---
+
+### 5.5 — Frontend Component Updates Completed (Phase 1 Mock)
+
+| Component | Status | Changes Made |
+|---|---|---|
+| `Signup.jsx` | ✅ Done | Vendor type toggle, document upload fields, IBAN, payment method selector, portfolio links |
+| `AdminVendors.jsx` | ✅ Done | Vendor type badge, doc status badge, IBAN reveal, payment method badge, portfolio links in side panel |
+| `VendorProfile.jsx` | ✅ Done | Payment & Banking tab with escrow stats, IBAN reveal, commission rate, payout history |
+
+All use **mock/placeholder data**. Phase 2 wires these to the real API.
+
+---
+
+### 5.6 — Vendor Onboarding UX Flow
+
+```
+Landing Page
+  └─ Sign Up → Select "Vendor"
+       └─ Step 1: Choose Vendor Type (Company | Freelancer)
+       └─ Step 2: Business Info (name, description, city, category)
+       └─ Step 3: Upload Documents (ID / Commercial Register)
+       └─ Step 4: Portfolio (required for freelancers)
+       └─ Step 5: Bank Account IBAN
+       └─ Step 6: Payment Method Preference
+       └─ Submit Application
+            └─ Status: "Pending Review"
+                 └─ Admin Reviews → Approves / Rejects
+                      └─ Email notification sent
+                           └─ Vendor can now access dashboard and create services
+```
+
+---
+
+*This roadmap is a living document. Update it as features are completed by checking off tasks and adding new discoveries.*
+

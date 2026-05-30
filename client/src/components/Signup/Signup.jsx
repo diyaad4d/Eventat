@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 function Signup() {
     const location = useLocation();
@@ -22,10 +23,10 @@ function Signup() {
         e.preventDefault();
         try {
             await axios.post('https://eventat-backend.onrender.com/api/register', formData);
-            alert('Account Created Successfully! Please Login.');
+            toastSuccess('Account Created Successfully! Please Login.');
             navigate('/login');
         } catch (err) {
-            alert('Error: ' + (err.response?.data?.error || err.message));
+            toastError('Error: ' + (err.response?.data?.error || err.message));
         }
     };
 

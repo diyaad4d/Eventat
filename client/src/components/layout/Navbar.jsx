@@ -40,7 +40,7 @@ function IconButton({ icon, badge, label, onClick, to }) {
     <button
       onClick={onClick}
       aria-label={label}
-      className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--color-dark-soft)] hover:text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 transition-colors duration-150"
+      className="relative flex items-center justify-center w-11 h-11 md:w-9 md:h-9 rounded-xl text-[var(--color-dark-soft)] hover:text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 transition-colors duration-150"
     >
       {icon}
       {badge > 0 && (
@@ -77,8 +77,11 @@ function UserDropdown({ user, onLogout }) {
     { icon: <Briefcase size={15} />,       label: 'Services',  to: '/vendor/services' },
     { icon: <User size={15} />,            label: 'Profile',   to: '/vendor/profile' },
   ];
+  const adminItems = [
+    { icon: <LayoutDashboard size={15} />, label: 'Admin Panel', to: '/admin/dashboard' },
+  ];
 
-  const items = user?.role === 'vendor' ? vendorItems : customerItems;
+  const items = user?.role === 'admin' ? adminItems : user?.role === 'vendor' ? vendorItems : customerItems;
 
   return (
     <div ref={ref} className="relative">
@@ -86,7 +89,7 @@ function UserDropdown({ user, onLogout }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="true"
-        className="flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-[var(--color-gold)]/10 transition-colors duration-150"
+        className="flex items-center gap-2 rounded-xl px-2 py-1 min-h-[44px] md:min-h-0 hover:bg-[var(--color-gold)]/10 transition-colors duration-150"
       >
         <Avatar src={user?.avatar_url} name={user?.full_name ?? user?.username} size="sm" />
         <span className="hidden lg:block text-sm font-medium text-[var(--color-dark)] max-w-[100px] truncate">
@@ -180,7 +183,7 @@ function MobileDrawer({ isOpen, onClose, user, cartCount, onLogout }) {
           <button
             onClick={onClose}
             aria-label="Close menu"
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
           >
             <X size={18} />
           </button>
@@ -230,6 +233,12 @@ function MobileDrawer({ isOpen, onClose, user, cartCount, onLogout }) {
                 <NavLink to="/vendor/dashboard" onClick={onClose} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive ? 'bg-[var(--color-gold)]/10 text-[var(--color-gold)]' : 'text-[var(--color-dark-soft)] hover:bg-[var(--color-surface)]'}`}>
                   <LayoutDashboard size={16} className="opacity-60" />
                   Vendor Dashboard
+                </NavLink>
+              )}
+              {user.role === 'admin' && (
+                <NavLink to="/admin/dashboard" onClick={onClose} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive ? 'bg-red-500/10 text-red-500' : 'text-[var(--color-dark-soft)] hover:bg-[var(--color-surface)]'}`}>
+                  <LayoutDashboard size={16} className="opacity-60" />
+                  Admin Dashboard
                 </NavLink>
               )}
 
@@ -349,6 +358,17 @@ function Navbar() {
                     </Link>
                   )}
 
+                  {/* Admin dashboard shortcut */}
+                  {user.role === 'admin' && (
+                    <Link
+                      to="/admin/dashboard"
+                      className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-red-500/40 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-colors"
+                    >
+                      <LayoutDashboard size={15} />
+                      Admin Panel
+                    </Link>
+                  )}
+
                   {/* User dropdown */}
                   <UserDropdown user={user} onLogout={logout} />
                 </>
@@ -374,7 +394,7 @@ function Navbar() {
               <button
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-[var(--color-dark-soft)] hover:bg-[var(--color-surface)] transition-colors"
+                className="md:hidden flex items-center justify-center w-11 h-11 rounded-xl text-[var(--color-dark-soft)] hover:bg-[var(--color-surface)] transition-colors"
               >
                 <Menu size={20} />
               </button>

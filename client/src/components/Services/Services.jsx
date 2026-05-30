@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { toastSuccess, toastError, toastInfo, toastWarning } from '../../utils/toast';
 
 function Services() {
 
@@ -31,7 +32,7 @@ function Services() {
 
     const handleBookClick = (service) => {
         if (!user) {
-            alert("Please Login to book a service!");
+            toastInfo("Please login to book a service.");
             navigate('/login');
             return;
         }
@@ -40,7 +41,7 @@ function Services() {
     };
 
     const confirmBooking = async () => {
-        if (!eventDate) return alert("Please select a date for your event.");
+        if (!eventDate) return toastWarning("Please select an event date first.");
 
         try {
             await axios.post('https://eventat-backend.onrender.com/api/bookings', {
@@ -50,12 +51,12 @@ function Services() {
                 estimated_total_cost: selectedService.base_price
             });
 
-            alert("✅ Booking Successful! The vendor will contact you shortly.");
+            toastSuccess("Booking confirmed! ✅");
             setShowModal(false);
             setEventDate('');
         } catch (err) {
             console.error(err);
-            alert("❌ Booking Failed. Please try again.");
+            toastError("Booking failed. Please try again.");
         }
     };
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { toastError } from '../../utils/toast';
 
 function Login() {
     const navigate = useNavigate();
@@ -21,7 +22,7 @@ function Login() {
 
             navigate('/home');
         } catch (err) {
-            alert('Login Failed: ' + (err.response?.data?.error || err.message));
+            toastError('Login Failed: ' + (err.response?.data?.error || err.message));
         }
     };
 

@@ -77,6 +77,7 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   // ── Link renderer ─────────────────────────────────────────
   const SidebarLink = ({ item }) => {
     const badgeCount = item.badge === 'cart' ? cartCount : 0;
+    const PENDING_COUNT = 2; // matches MOCK_BOOKINGS Incoming count
 
     return (
       <NavLink
@@ -109,6 +110,24 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
             )}
             {badgeCount > 0 && collapsed && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--color-gold)]" />
+            )}
+            
+            {item.label === 'Booking Requests' && !collapsed && (
+              <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black px-1.5">
+                {PENDING_COUNT}
+              </span>
+            )}
+            {item.label === 'Booking Requests' && collapsed && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+            )}
+            
+            {item.label === 'Notifications' && !collapsed && (
+              <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black px-1.5">
+                3
+              </span>
+            )}
+            {item.label === 'Notifications' && collapsed && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
             )}
 
             {/* Tooltip on collapsed */}

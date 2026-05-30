@@ -44,13 +44,7 @@ function EventTypeHub() {
       {/* ── Staggered 2×2 grid ─────────────────────────────── */}
       <div
         role="list"
-        style={{
-          display:             'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          justifyContent:      'center',
-          gap:                 '1.5rem',
-          alignItems:          'start',   // lets each card sit at its own vertical offset
-        }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start justify-center gap-6"
       >
         {EVENT_TYPE_ORDER.map((typeKey, idx) => {
           const cfg = EVENT_TYPE_CONFIG[typeKey];
@@ -92,14 +86,8 @@ function EventTypeHub() {
           transform: scale(1.08);
         }
 
-        @media (max-width: 1023px) {
-          /* Tablet: fallback to 2x2 staggered */
-          div[role="list"] {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-        }
         @media (max-width: 639px) {
-          /* Mobile: 2x2 equal, no stagger */
+          /* Mobile: 1 column, no stagger */
           .eth-card-wrapper { margin-top: 0 !important; }
           .eth-card-btn { 
             height: 280px !important; 

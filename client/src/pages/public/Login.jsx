@@ -14,7 +14,7 @@ import useAuthStore from '../../store/authStore';
 //  Role → redirect map (mirrors ProtectedRoute ROLE_HOME)
 // ─────────────────────────────────────────────────────────────
 const ROLE_REDIRECT = {
-  customer: '/customer/dashboard',
+  customer: '/home',
   vendor: '/vendor/dashboard',
   admin: '/admin/dashboard',
 };

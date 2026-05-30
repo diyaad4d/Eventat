@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 
 import FilterSidebar, { DEFAULT_FILTERS } from '../../components/Services/FilterSidebar';
+import EmptyState from '../../components/shared/EmptyState';
+import PageTransition from '../../components/shared/PageTransition';
 import ServiceCard from '../../components/Home/ServiceCard';
 import { MOCK_FEATURED_SERVICES } from '../../components/Home/FeaturedServices';
 import EventHubHeader from '../../components/Services/EventHubHeader';
@@ -77,43 +79,6 @@ function SkeletonCard({ viewMode }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-//  EmptyState — shown when no services match filters
-// ─────────────────────────────────────────────────────────────
-function EmptyState({ onClear }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-20 px-6">
-      {/* Icon */}
-      <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mb-6">
-        <SearchX size={36} className="text-gray-300" aria-hidden="true" />
-      </div>
-
-      <h3 className="text-xl font-extrabold text-[var(--color-dark)] mb-2">
-        No services found
-      </h3>
-      <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-8">
-        No services match your current filters. Try adjusting your search or clearing all filters to see more results.
-      </p>
-
-      <button
-        type="button"
-        onClick={onClear}
-        className={[
-          'inline-flex items-center gap-2',
-          'px-6 py-3 rounded-xl text-sm font-bold',
-          'text-white bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)]',
-          'shadow-[0_4px_14px_rgba(201,162,77,0.28)]',
-          'hover:shadow-[0_6px_20px_rgba(201,162,77,0.42)]',
-          'transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold)] focus-visible:ring-offset-2',
-        ].join(' ')}
-      >
-        <RefreshCw size={15} aria-hidden="true" />
-        Clear Filters
-      </button>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 //  MobileFilterDrawer — slide-up drawer for mobile
@@ -168,8 +133,15 @@ const AllServicesSection = React.memo(function AllServicesSection({
 }) {
   // FIX 1: sidebarOpen now comes from parent — no local state here
 
-  const totalCount   = services.length;
-  const visibleCards = services.slice(0, visibleN);
+  const filteredServices = services.filter(svc => {
+    if (filters.categories && filters.categories.length > 0) {
+      if (!filters.categories.includes(svc.categorySlug)) return false;
+    }
+    return true;
+  });
+
+  const totalCount   = filteredServices.length;
+  const visibleCards = filteredServices.slice(0, visibleN);
   const hasMore      = visibleN < totalCount;
 
   return (
@@ -272,20 +244,19 @@ const AllServicesSection = React.memo(function AllServicesSection({
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 className={[
-                  'md:hidden relative inline-flex items-center gap-2',
-                  'px-3.5 py-2 rounded-xl text-sm font-semibold',
-                  'border-2 border-[var(--color-gold)] text-[var(--color-gold)]',
-                  'hover:bg-[var(--color-gold)] hover:text-white',
-                  'transition-all duration-200',
+                  'md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
+                  'inline-flex items-center justify-center gap-2',
+                  'min-h-[44px] min-w-[120px] px-6 py-3 rounded-full',
+                  'bg-[var(--color-gold)] text-white shadow-[0_4px_14px_rgba(201,162,77,0.4)]',
+                  'hover:bg-[var(--color-gold-dark)] transition-all duration-200 text-sm font-bold',
                 ].join(' ')}
                 aria-label="Open filters"
                 aria-expanded={drawerOpen}
                 aria-controls="mobile-filter-drawer"
               >
-                <SlidersHorizontal size={15} aria-hidden="true" />
-                Filters
+                🔍 Filters
                 {activeCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-gold)] text-white text-[9px] font-black flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white">
                     {activeCount}
                   </span>
                 )}
@@ -401,7 +372,7 @@ const AllServicesSection = React.memo(function AllServicesSection({
               EMPTY STATE — no results after loading
           ══════════════════════════════════════════════ */}
           {!isLoading && totalCount === 0 && (
-            <EmptyState onClear={handleClear} />
+            <EmptyState variant="no-results" onAction={handleClear} />
           )}
 
           {/* ══════════════════════════════════════════════
@@ -418,8 +389,8 @@ const AllServicesSection = React.memo(function AllServicesSection({
                 role="list"
                 aria-label="Service results"
               >
-                {visibleCards.map((service) => (
-                  <div key={service.id} role="listitem" className="h-full flex">
+                {visibleCards.map((service, index) => (
+                  <div key={service.id} role="listitem" className="h-full flex card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
                     <ServiceCard service={service} viewMode={viewMode} className="flex-1" />
                   </div>
                 ))}
@@ -547,7 +518,7 @@ function Services() {
   //  Render
   // ─────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[var(--color-surface)]">
+    <PageTransition className="min-h-screen bg-[var(--color-surface)]">
 
       {/* ══════════════════════════════════════════════════════
           PAGE HEADER
@@ -630,7 +601,7 @@ function Services() {
         onChange={handleFilterChange}
         onClear={handleClear}
       />
-    </div>
+    </PageTransition>
   );
 }
 
