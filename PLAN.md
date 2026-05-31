@@ -677,565 +677,226 @@ Go through every single page/component and add Tailwind responsive breakpoints:
 ## SECTION 3 — PHASE 2: BACKEND & DATABASE ARCHITECTURE
 
 > Build after Phase 1 UI is complete. Wire the already-built UI components to real API endpoints.
+> **Note (Updated 2026-05-30):** This section has been comprehensively updated following a deep-dive architectural assessment of the Phase 1 codebase. All schema gaps, endpoint mismatches, and the dual booking model conflict (resolved via Option A) have been corrected in this plan.
 
 ---
 
-### PHASE 2 — STEP 0: Database Migration & Schema Rebuild
+### PHASE 2 — LAYER 0: Package Installation
 
-#### Step 2.0.1 — Install Migration Tool
+#### Step 2.0.1 — Install Production Middleware & Tools
 ```bash
 cd server
-npm install node-pg-migrate
-```
-Configure `package.json` with `"migrate": "node-pg-migrate"` script.
-
-#### Step 2.0.2 — Write Migration: Drop and Rebuild Full Schema
-Create `server/migrations/001_initial_schema.sql`:
-
-```sql
--- USERS (extended from MVP)
-CREATE TABLE users (
-    user_id       SERIAL PRIMARY KEY,
-    role          VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'vendor', 'admin')),
-    username      VARCHAR(50) UNIQUE NOT NULL,
-    email         VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,  -- bcrypt hash (Phase 3)
-    full_name     VARCHAR(120),
-    phone         VARCHAR(20),
-    preferred_language VARCHAR(5) DEFAULT 'en',
-    is_active     BOOLEAN DEFAULT TRUE,
-    created_at    TIMESTAMP DEFAULT NOW(),
-    updated_at    TIMESTAMP DEFAULT NOW()
-);
-
--- CUSTOMER PROFILES
-CREATE TABLE customer_profiles (
-    customer_id   INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
-    address       VARCHAR(255),
-    city          VARCHAR(100),
-    avatar_url    VARCHAR(500)
-);
-
--- VENDOR PROFILES
-CREATE TABLE vendor_profiles (
-    vendor_id             INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
-    company_name          VARCHAR(150),
-    company_description   TEXT,
-    address               VARCHAR(255),
-    city                  VARCHAR(100),
-    logo_url              VARCHAR(500),
-    registration_status   VARCHAR(20) DEFAULT 'pending' CHECK (registration_status IN ('pending', 'approved', 'rejected')),
-    approved_by_admin_id  INTEGER REFERENCES users(user_id),
-    approved_at           TIMESTAMP,
-    created_at            TIMESTAMP DEFAULT NOW()
-);
-
--- EVENT TYPES
-CREATE TABLE event_types (
-    event_type_id SERIAL PRIMARY KEY,
-    name          VARCHAR(80) NOT NULL,   -- 'Wedding', 'Graduation', 'Milestone Birthdays', 'Corporate', 'General'
-    description   TEXT,
-    is_active     BOOLEAN DEFAULT TRUE
-);
-
--- CATEGORIES
-CREATE TABLE categories (
-    category_id   SERIAL PRIMARY KEY,
-    name          VARCHAR(80) NOT NULL,   -- 'Venue', 'Catering', 'Photography', etc.
-    description   TEXT,
-    icon_name     VARCHAR(50),            -- Lucide icon name
-    image_url     VARCHAR(500),
-    sort_order    INTEGER DEFAULT 0
-);
-
--- SUBCATEGORIES
-CREATE TABLE subcategories (
-    subcategory_id SERIAL PRIMARY KEY,
-    category_id    INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
-    name           VARCHAR(80) NOT NULL,   -- 'Hotels', 'Halls', 'Farms', 'DJs', 'Bands', etc.
-    description    TEXT,
-    sort_order     INTEGER DEFAULT 0
-);
-
--- SERVICES
-CREATE TABLE services (
-    service_id        SERIAL PRIMARY KEY,
-    vendor_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    category_id       INTEGER NOT NULL REFERENCES categories(category_id),
-    subcategory_id    INTEGER REFERENCES subcategories(subcategory_id),
-    title             VARCHAR(150) NOT NULL,
-    description       TEXT,
-    base_price        DECIMAL(10,2) NOT NULL,
-    pricing_unit      VARCHAR(30) DEFAULT 'per_event',  -- 'per_event', 'per_hour', 'per_person', 'per_day'
-    service_location  VARCHAR(255),
-    city              VARCHAR(100),
-    capacity          INTEGER,
-    is_active         BOOLEAN DEFAULT TRUE,
-    avg_rating        DECIMAL(3,2) DEFAULT 0,
-    review_count      INTEGER DEFAULT 0,
-    created_at        TIMESTAMP DEFAULT NOW(),
-    updated_at        TIMESTAMP DEFAULT NOW()
-);
-
--- SERVICE IMAGES
-CREATE TABLE service_images (
-    image_id    SERIAL PRIMARY KEY,
-    service_id  INTEGER NOT NULL REFERENCES services(service_id) ON DELETE CASCADE,
-    image_url   VARCHAR(500) NOT NULL,
-    is_primary  BOOLEAN DEFAULT FALSE,
-    sort_order  INTEGER DEFAULT 0,
-    created_at  TIMESTAMP DEFAULT NOW()
-);
-
--- EVENT PLANS ("My Events" created by customers)
-CREATE TABLE event_plans (
-    event_id             SERIAL PRIMARY KEY,
-    customer_id          INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    event_type_id        INTEGER REFERENCES event_types(event_type_id),
-    name                 VARCHAR(150),
-    event_date           DATE NOT NULL,
-    event_location       VARCHAR(255),
-    guest_count          INTEGER,
-    special_requests     TEXT,
-    status               VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'confirmed', 'completed', 'cancelled')),
-    estimated_total_cost DECIMAL(10,2) DEFAULT 0,
-    created_at           TIMESTAMP DEFAULT NOW(),
-    updated_at           TIMESTAMP DEFAULT NOW()
-);
-
--- EVENT PLAN ITEMS (services inside an event plan = the "cart" items)
-CREATE TABLE event_plan_items (
-    event_item_id      SERIAL PRIMARY KEY,
-    event_id           INTEGER NOT NULL REFERENCES event_plans(event_id) ON DELETE CASCADE,
-    service_id         INTEGER NOT NULL REFERENCES services(service_id),
-    quantity           INTEGER DEFAULT 1,
-    unit_price_at_time DECIMAL(10,2) NOT NULL,  -- price snapshot at booking time
-    line_total         DECIMAL(10,2) NOT NULL,
-    vendor_item_status VARCHAR(20) DEFAULT 'pending' CHECK (vendor_item_status IN ('pending', 'accepted', 'rejected', 'completed')),
-    vendor_note        TEXT,
-    created_at         TIMESTAMP DEFAULT NOW()
-);
-
--- REVIEWS
-CREATE TABLE reviews (
-    review_id    SERIAL PRIMARY KEY,
-    service_id   INTEGER NOT NULL REFERENCES services(service_id) ON DELETE CASCADE,
-    customer_id  INTEGER NOT NULL REFERENCES users(user_id),
-    event_item_id INTEGER REFERENCES event_plan_items(event_item_id),
-    rating       INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    review_text  TEXT,
-    created_at   TIMESTAMP DEFAULT NOW(),
-    UNIQUE(service_id, customer_id)  -- one review per customer per service
-);
-
--- NOTIFICATIONS
-CREATE TABLE notifications (
-    notification_id   SERIAL PRIMARY KEY,
-    user_id           INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    event_id          INTEGER REFERENCES event_plans(event_id),
-    title             VARCHAR(150),
-    message_body      TEXT,
-    notification_type VARCHAR(30),  -- 'booking_update', 'review_reminder', 'approval', 'general'
-    is_read           BOOLEAN DEFAULT FALSE,
-    created_at        TIMESTAMP DEFAULT NOW()
-);
-
--- PAYMENT METHODS (lookup table)
-CREATE TABLE payment_methods (
-    method_id  SERIAL PRIMARY KEY,
-    name       VARCHAR(50) NOT NULL,   -- 'Credit Card', 'Cash on Delivery', 'CliQ'
-    provider   VARCHAR(50),
-    is_active  BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- PAYMENTS
-CREATE TABLE payments (
-    payment_id      SERIAL PRIMARY KEY,
-    event_id        INTEGER NOT NULL REFERENCES event_plans(event_id),
-    method_id       INTEGER REFERENCES payment_methods(method_id),
-    amount          DECIMAL(10,2) NOT NULL,
-    currency        CHAR(3) DEFAULT 'JOD',
-    status          VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
-    transaction_ref VARCHAR(100),
-    paid_at         TIMESTAMP,
-    created_at      TIMESTAMP DEFAULT NOW()
-);
-
--- INDEXES FOR PERFORMANCE
-CREATE INDEX idx_services_category ON services(category_id);
-CREATE INDEX idx_services_vendor ON services(vendor_id);
-CREATE INDEX idx_services_city ON services(city);
-CREATE INDEX idx_services_active ON services(is_active);
-CREATE INDEX idx_event_plans_customer ON event_plans(customer_id);
-CREATE INDEX idx_event_plan_items_event ON event_plan_items(event_id);
-CREATE INDEX idx_reviews_service ON reviews(service_id);
-CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
+npm install bcryptjs jsonwebtoken express-rate-limit helmet morgan winston multer
+npm install --save-dev node-pg-migrate
 ```
 
-#### Step 2.0.3 — Seed Initial Data
+---
+
+### PHASE 2 — LAYER 1: Server Foundation & Middleware
+
+#### Step 2.1.1 — Create Database Pool (`server/db.js`)
+- Extract pg Pool configuration into a centralized exported module.
+
+#### Step 2.1.2 — Add Security & Error Middleware
+- `server/middleware/errorHandler.js` — Centralized error handler returning JSON.
+- `server/middleware/validate.middleware.js` — express-validator field-level error formatter.
+- `server/middleware/auth.middleware.js` — JWT verification stub with Phase 2 test fallbacks.
+- `server/middleware/role.middleware.js` — RBAC middleware factory (e.g., `requireRole('admin')`).
+
+#### Step 2.1.3 — Restructure Server into MVC Pattern
+- Rewrite `server/index.js` to serve solely as an Express bootstrap file importing routes.
+
+---
+
+### PHASE 2 — LAYER 2: Database Schema & Seeds
+
+#### Step 2.2.1 — Write Migration: Drop and Rebuild Full Schema
+Create `server/migrations/001_initial_schema.sql` incorporating **ALL GAP FIXES**:
+
+- **users** & **customer_profiles** (Standard).
+- **event_types**: Added `slug VARCHAR(80) UNIQUE NOT NULL`.
+- **categories**: Added `slug VARCHAR(100) UNIQUE NOT NULL` and `is_active BOOLEAN DEFAULT TRUE`.
+- **subcategories**: Added `slug VARCHAR(100)` and `is_active BOOLEAN DEFAULT TRUE`.
+- **vendor_profiles**: 
+  - Added `preferred_category_id INTEGER REFERENCES categories(category_id)`.
+  - Replaced `portfolio_instagram` with `social_links JSONB DEFAULT '[]'`.
+  - Added `pending_changes JSONB`, `pending_changes_at TIMESTAMP`, `pending_changes_approved_at TIMESTAMP`.
+- **vendor_documents** (normalized storage).
+- **services** & **service_images** (Standard).
+- **event_plans** (Standard).
+- **event_plan_items** ("bookings" — **Option A Model Fix**):
+  - Added `event_date DATE`, `guest_count INTEGER`, `special_requests TEXT` to support single-item auto-created plans.
+- **reviews** (Standard).
+- **notifications**: Added `action_url VARCHAR(255)`.
+- **payment_methods**, **payments**, **escrow_transactions** (Standard).
+- **saved_services** (New table for wishlist feature).
+
+#### Step 2.2.2 — Seed Initial Data
 Create `server/seeds/seed.js`:
-- Insert 5 categories (Venue, Catering, Photography, Entertainment, Decoration)
-- Insert subcategories for each
-- Insert 5 event types (Wedding, Graduation, Milestone Birthdays, Corporate, General)
-- Insert 3 payment methods (Cash on Delivery, Credit Card, CliQ)
-- Insert 2 test vendor users + vendor_profiles
-- Insert 10 test services across categories with realistic Jordanian data
-- Insert 3 test customer users
-- `npm run seed` script in `package.json`
+- Seed **10 categories** (with exact slugs matching frontend) and subcategories.
+- Seed **5 event types**.
+- Seed test users, vendors (company + freelancer), and customers.
+- Seed **12 realistic services** with images.
 
 ---
 
-### PHASE 2 — STEP 1: Middleware & Server Hardening
+### PHASE 2 — LAYER 3: Routes & Controllers (~37 Endpoints)
 
-#### Step 2.1.1 — Install Production Middleware
-```bash
-npm install bcryptjs jsonwebtoken express-rate-limit helmet morgan winston
-```
-(Note: JWT + bcrypt implementation is Phase 3. Install now, configure stubs.)
+#### Step 2.3.1 — Auth Routes (`auth.routes.js` / `auth.controller.js`)
+- `POST /api/auth/register` — Handle vendor/customer creation with proper profiles.
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me` (Alias for `/users/me`)
+- `POST /api/auth/forgot-password` (Stub)
+- `POST /api/auth/reset-password` (Stub)
 
-#### Step 2.1.2 — Add Security Middleware to `index.js`
-```javascript
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+#### Step 2.3.2 — Categories Routes (`categories.routes.js` / `categories.controller.js`)
+- `GET /api/categories` — Return all active categories with subcategories and service counts.
+- `GET /api/categories/:id/subcategories`
+- `GET /api/event-types`
 
-app.use(helmet());  // Secure HTTP headers
-app.use(morgan('combined'));  // Request logging
+#### Step 2.3.3 — Services Routes (`services.routes.js` / `services.controller.js`)
+- `GET /api/services` — Advanced query supporting `category` (slug), `subcategory` (slug), search, price, sort. *Must* include `primary_image_url` computed column.
+- `GET /api/services/featured` — Top 8 rated services.
+- `GET /api/services/:id` — Full service detail (images, reviews, similar).
+- `GET /api/vendors/:vendorId/services` — Public vendor services.
 
-// Rate limiting: 100 requests per 15 minutes per IP
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
-app.use('/api/', limiter);
-```
+#### Step 2.3.4 — Bookings/Event Plans Routes (`bookings.routes.js` / `bookings.controller.js`)
+*Uses Option A Model: All bookings are event_plan_items.*
+- `POST /api/bookings` — Direct "Book Now". Auto-creates single-item event plan.
+- `GET /api/bookings/my` — Customer's items (joins event_plans & services).
+- `GET /api/bookings/:id` — Single booking item detail.
+- `PATCH /api/bookings/:id/cancel` — Customer cancel.
+- `POST /api/event-plans` — Create empty plan.
+- `GET /api/event-plans/my` — Customer plans.
+- `GET /api/event-plans/:id` — Plan detail.
+- `PATCH /api/event-plans/:id`
+- `DELETE /api/event-plans/:id`
+- `POST /api/event-plans/:id/items` — "Add to Cart".
+- `DELETE /api/event-plans/:planId/items/:itemId`
+- `POST /api/event-plans/:id/submit`
 
-#### Step 2.1.3 — Add Input Validation Middleware
-Install `express-validator`:
-```bash
-npm install express-validator
-```
-Create `server/middleware/validate.js` — a middleware factory that runs validation chains and returns 422 with field-level errors.
+#### Step 2.3.5 — Vendor Specific Routes (`vendors.routes.js` / `vendors.controller.js`)
+- `GET /api/vendor/services` — Auth'd: all own services (active + inactive).
+- `POST /api/vendor/services` — Create service.
+- `PATCH /api/vendor/services/:id` — Update service.
+- `PATCH /api/vendor/services/:id/status` — Toggle active.
+- `POST /api/vendor/services/:id/images` — Upload images.
+- `DELETE /api/vendor/services/:id/images/:imageId`
+- `GET /api/vendor/bookings` — All `event_plan_items` for vendor's services.
+- `PATCH /api/vendor/bookings/:itemId/accept`
+- `PATCH /api/vendor/bookings/:itemId/reject`
+- `GET /api/vendor/profile` — Auth'd full profile.
+- `PATCH /api/vendor/profile` — Writes to `pending_changes` workflow.
+- `POST /api/vendor/profile/logo`
+- `GET /api/vendor/analytics` — Monthly bookings, revenue, KPI stats.
+- `GET /api/vendors/me/payment` — Escrow balance & IBAN.
+- `POST /api/vendors/me/payment/change-request`
 
-#### Step 2.1.4 — Add Centralized Error Handler
-Create `server/middleware/errorHandler.js`:
-- Catches all errors propagated via `next(err)`
-- Returns consistent `{ error: string, details: [...] }` JSON
-- Logs error with stack trace in development, suppresses stack in production
+#### Step 2.3.6 — Reviews Routes (`reviews.routes.js` / `reviews.controller.js`)
+- `POST /api/services/:id/reviews`
+- `GET /api/services/:id/reviews`
+- `PATCH /api/reviews/:reviewId` — Update own review text/rating.
+- `DELETE /api/reviews/:reviewId`
+- `GET /api/services/:id/reviews/eligibility` — Returns `{ canReview: bool, hasReviewed: bool }`.
 
-#### Step 2.1.5 — Restructure Server into MVC Pattern
-Refactor from single `index.js` to:
-```
-server/
-├── index.js          (app bootstrap only — requires routes, starts server)
-├── db.js             (Pool instance, exported)
-├── routes/
-│   ├── auth.routes.js
-│   ├── services.routes.js
-│   ├── bookings.routes.js
-│   ├── vendors.routes.js
-│   ├── users.routes.js
-│   ├── categories.routes.js
-│   ├── reviews.routes.js
-│   ├── notifications.routes.js
-│   └── admin.routes.js
-├── controllers/
-│   ├── auth.controller.js
-│   ├── services.controller.js
-│   ├── bookings.controller.js
-│   ├── vendors.controller.js
-│   ├── users.controller.js
-│   ├── categories.controller.js
-│   ├── reviews.controller.js
-│   ├── notifications.controller.js
-│   └── admin.controller.js
-├── middleware/
-│   ├── auth.middleware.js     (JWT verification stub for Phase 3)
-│   ├── role.middleware.js     (RBAC check stub for Phase 3)
-│   ├── validate.middleware.js
-│   └── errorHandler.js
-└── seeds/
-    └── seed.js
-```
+#### Step 2.3.7 — Notifications Routes (`notifications.routes.js` / `notifications.controller.js`)
+- `GET /api/notifications`
+- `PUT /api/notifications/:id/read`
+- `PUT /api/notifications/read-all`
 
----
+#### Step 2.3.8 — Users Profile Routes (`users.routes.js` / `users.controller.js`)
+- `GET /api/users/me`
+- `PUT /api/users/me`
+- `PUT /api/users/me/password`
+- `DELETE /api/users/me`
 
-### PHASE 2 — STEP 2: Auth Routes (Production-Ready Structure)
+#### Step 2.3.9 — Admin Routes (`admin.routes.js` / `admin.controller.js`)
+- `GET /api/admin/stats` — Platform aggregates.
+- `GET /api/admin/vendors` — Supports `?status=pending|approved|rejected`.
+- `GET /api/admin/vendors/:id`
+- `PUT /api/admin/vendors/:id/approve-changes` — Process pending profile edits.
+- `PUT /api/admin/vendors/:id/approve`
+- `PUT /api/admin/vendors/:id/reject`
+- `GET /api/admin/users`
+- `PUT /api/admin/users/:userId/ban`
+- `GET /api/admin/categories` — All categories with subcategories.
+- `POST /api/admin/categories`
+- `PUT /api/admin/categories/:id`
+- `DELETE /api/admin/categories/:id`
+- `POST /api/admin/categories/:id/subcategories`
+- `PUT /api/admin/subcategories/:subId`
+- `DELETE /api/admin/subcategories/:subId`
+- `GET /api/admin/analytics` — Revenue/Booking charts.
 
-> Note: Full JWT + bcrypt implementation is Phase 3. In Phase 2, build the route structure and wire to DB. Phase 3 upgrades the implementation without changing the API contract.
-
-#### Step 2.2.1 — `POST /api/auth/register`
-- Validate: all required fields, valid email format, password min 8 chars, role in allowed values
-- Check: email uniqueness, username uniqueness
-- **Phase 2 (temporary):** store raw password. Phase 3 replaces with bcrypt hash.
-- Create `users` row + `customer_profiles` or `vendor_profiles` row based on role
-- Return user object (without password_hash)
-
-#### Step 2.2.2 — `POST /api/auth/login`
-- Validate: email + password present
-- Find user by email
-- **Phase 2 (temporary):** direct password comparison. Phase 3 replaces with bcrypt.compare()
-- Return user object + `token: null` (Phase 3 fills in JWT)
-
-#### Step 2.2.3 — `POST /api/auth/logout`
-- Stateless for now (client deletes token). Phase 3 adds token blacklist/refresh token.
-
----
-
-### PHASE 2 — STEP 3: Categories & Subcategories API
-
-#### Step 2.3.1 — `GET /api/categories`
-- Return all active categories with sort_order
-- Include subcategory count per category
-
-#### Step 2.3.2 — `GET /api/categories/:id/subcategories`
-- Return all subcategories for a given category_id
-
-#### Step 2.3.3 — `GET /api/event-types`
-- Return all active event types
+#### Step 2.3.10 — Upload Routes (`upload.routes.js` / `upload.controller.js`)
+- `POST /api/upload/documents` — Two-phase Cloudinary upload for vendor registration docs.
+- `POST /api/upload/images`
 
 ---
 
-### PHASE 2 — STEP 4: Services API (Advanced)
+### PHASE 2 — LAYER 4: Frontend Service Files & Pre-Wiring
 
-#### Step 2.4.1 — `GET /api/services` (Advanced Query with Filters)
-This is the most complex query. Build a dynamic SQL query builder:
-
-Supported query params:
-- `search` — full-text search against `services.title` and `services.description` (use `ILIKE %term%`)
-- `category_id` — filter by category
-- `subcategory_id` — filter by subcategory
-- `city` — filter by city (case-insensitive)
-- `min_price`, `max_price` — price range filter
-- `min_rating` — minimum avg_rating filter
-- `event_date` — filter out services with conflicting bookings on that date (advanced)
-- `sort` — `price_asc`, `price_desc`, `rating_desc`, `newest`
-- `page`, `limit` — pagination (default: page=1, limit=12)
-
-Return: `{ services: [...], total: N, page: N, totalPages: N }`
-
-#### Step 2.4.2 — `GET /api/services/:id`
-Return full service object with:
-- All images (from `service_images`)
-- Vendor info (company_name, logo_url, avg_rating from vendor's services)
-- Category + subcategory names
-- Average rating + review count
-- Last 5 reviews (joined from `reviews` + `users`)
-- "Similar services" (same category, different vendor, limit 4)
-
-#### Step 2.4.3 — `POST /api/services` (Vendor only — Phase 3 adds auth guard)
-- Validate all required fields
-- Create `services` row
-- Create `service_images` rows for uploaded URLs
-- Return created service
-
-#### Step 2.4.4 — `PUT /api/services/:id` (Vendor only — owner check)
-- Update service fields
-- Handle image additions/deletions (array diff)
-- Update `updated_at`
-
-#### Step 2.4.5 — `DELETE /api/services/:id` (Vendor only — soft delete)
-- Set `is_active = false` (never hard delete — preserves historical booking records)
-
-#### Step 2.4.6 — `GET /api/vendor/:vendorId/services`
-- Return all active services for a given vendor
-- Used by vendor public profile page
+#### Step 2.4.1 — Create/Update Frontend Services
+- Create `client/src/services/notifications.service.js`
+- Create `client/src/services/admin.service.js`
+- Create `client/src/services/upload.service.js`
+- Update `auth.service.js` (`getMe` calls `/users/me`)
 
 ---
 
-### PHASE 2 — STEP 5: Event Plans & Bookings API
+### PHASE 2 — LAYER 5: Frontend API Wiring
 
-#### Step 2.5.1 — `POST /api/event-plans`
-- Create a new event plan for the logged-in customer
-- Required: `event_type_id`, `event_date`, `name`
-- Return created event plan
+Go through each Phase 1 page component and replace mock/hardcoded data with React Query hooks connected to the services built in Layer 4.
 
-#### Step 2.5.2 — `GET /api/event-plans` (Customer's own plans)
-- Return all event plans for the customer (from `customer_id`)
-- Include item count per plan
-- Support `status` filter
-
-#### Step 2.5.3 — `GET /api/event-plans/:id`
-- Return full plan with all `event_plan_items` joined with service info and vendor info
-
-#### Step 2.5.4 — `PUT /api/event-plans/:id`
-- Update plan fields (name, date, guest_count, special_requests)
-- Update status (e.g., submit plan: `draft` → `submitted`)
-- Recalculate `estimated_total_cost` from sum of `event_plan_items.line_total`
-
-#### Step 2.5.5 — `DELETE /api/event-plans/:id`
-- Soft cancel: set status to `cancelled`
-
-#### Step 2.5.6 — `POST /api/event-plans/:id/items`
-Adding a service to an event plan (the "Add to Cart" action):
-- Body: `{ service_id, quantity }`
-- Look up current `base_price` for `unit_price_at_time` snapshot
-- Calculate `line_total = unit_price_at_time * quantity`
-- Insert into `event_plan_items`
-- Update `estimated_total_cost` on the parent `event_plans` row
-- Trigger a notification to the vendor (INSERT into `notifications`)
-
-#### Step 2.5.7 — `DELETE /api/event-plans/:planId/items/:itemId`
-- Remove item, recalculate plan total
-
-#### Step 2.5.8 — `PUT /api/event-plan-items/:itemId/status` (Vendor action)
-- Vendor accepts or rejects a booking item
-- Body: `{ status: 'accepted' | 'rejected', vendor_note: '...' }`
-- Trigger notification to customer
-
----
-
-### PHASE 2 — STEP 6: Reviews API
-
-#### Step 2.6.1 — `POST /api/services/:serviceId/reviews`
-- Validate: customer must have a completed booking for this service (check `event_plan_items` for completed status)
-- Validate: rating 1–5, review_text optional
-- Check: no duplicate review (UNIQUE constraint on service_id + customer_id)
-- Insert review
-- Recalculate `services.avg_rating` and `services.review_count` (UPDATE with AVG query)
-
-#### Step 2.6.2 — `GET /api/services/:serviceId/reviews`
-- Return paginated reviews for a service
-- Include reviewer's name and avatar
-- Include overall rating breakdown (count per star level)
-
-#### Step 2.6.3 — `DELETE /api/reviews/:reviewId`
-- Customer can delete their own review
-- Admin can delete any review
-- Recalculate service avg_rating after deletion
-
----
-
-### PHASE 2 — STEP 7: User Profile API
-
-#### Step 2.7.1 — `GET /api/users/me`
-- Return current user's full profile (joins with customer_profile or vendor_profile)
-
-#### Step 2.7.2 — `PUT /api/users/me`
-- Update: full_name, phone, address, city, avatar_url
-- Cannot change: email, username, role via this endpoint
-
-#### Step 2.7.3 — `PUT /api/users/me/password`
-- Body: `{ current_password, new_password }`
-- Phase 2 (temporary): plain text comparison + update
-- Phase 3: bcrypt.compare() + bcrypt.hash()
-
-#### Step 2.7.4 — `DELETE /api/users/me`
-- Soft delete: set `is_active = false` on the `users` row
-- Does NOT hard-delete (preserves booking history data integrity)
-
----
-
-### PHASE 2 — STEP 8: Vendor Profile API
-
-#### Step 2.8.1 — `GET /api/vendors/:vendorId/profile`
-Public vendor profile. Returns:
-- User info (name, username)
-- Vendor profile (company_name, description, logo, city, registration_status)
-- All active services
-- Average rating across all their services
-
-#### Step 2.8.2 — `PUT /api/vendors/me/profile`
-- Vendor updates their own company profile (company_name, description, logo_url, address, city)
-
----
-
-### PHASE 2 — STEP 9: Notifications API
-
-#### Step 2.9.1 — `GET /api/notifications`
-- Return all notifications for the current user
-- Support `unread_only=true` query param
-- Return `unread_count` in response header or body
-
-#### Step 2.9.2 — `PUT /api/notifications/:id/read`
-- Mark a single notification as read
-
-#### Step 2.9.3 — `PUT /api/notifications/read-all`
-- Mark all of user's notifications as read
-
----
-
-### PHASE 2 — STEP 10: Admin API
-
-#### Step 2.10.1 — `GET /api/admin/stats`
-Platform-wide aggregate stats: total users, total vendors, total bookings, pending approvals count.
-
-#### Step 2.10.2 — `GET /api/admin/vendors/pending`
-Return all vendors with `registration_status = 'pending'`.
-
-#### Step 2.10.3 — `PUT /api/admin/vendors/:vendorId/approve`
-- Set `registration_status = 'approved'`, set `approved_by_admin_id`, set `approved_at`
-- Trigger notification to vendor
-
-#### Step 2.10.4 — `PUT /api/admin/vendors/:vendorId/reject`
-- Set `registration_status = 'rejected'`
-- Trigger notification to vendor
-
-#### Step 2.10.5 — `GET /api/admin/users`
-- Paginated list of all users, supports search and role filter
-
-#### Step 2.10.6 — `PUT /api/admin/users/:userId/ban`
-- Toggle `is_active` on user
-
-#### Step 2.10.7 — `POST /api/admin/categories`
-- Create new category
-
-#### Step 2.10.8 — `PUT /api/admin/categories/:id`
-- Edit category name/description/icon
-
----
-
-### PHASE 2 — STEP 11: Frontend API Wiring
-
-Go through each Phase 1 page component and replace mock/hardcoded data with React Query hooks:
-
-#### Step 2.11.1 — Wire Services Listing Page
+#### Step 2.5.1 — Wire Services Listing Page
 - Replace `axios.get` with `useQuery(['services', filters], () => servicesService.getAll(filters))`
 - Make filters reactive: changing any filter triggers a new query
 - URL params update on filter change (debounced)
 
-#### Step 2.11.2 — Wire Service Detail Page
+#### Step 2.5.2 — Wire Service Detail Page
 - `useQuery(['service', serviceId], () => servicesService.getById(serviceId))`
 - `useQuery(['reviews', serviceId], () => reviewsService.getForService(serviceId))`
 - `useMutation` for submitting a review
 
-#### Step 2.11.3 — Wire Customer Dashboard Pages
+#### Step 2.5.3 — Wire Customer Dashboard Pages
 - `useQuery` for bookings, event plans, notifications
 - `useMutation` for cancel booking, create event plan, add/remove cart items
 - Invalidate relevant queries on mutation success
 
-#### Step 2.11.4 — Wire Vendor Dashboard Pages
-- `useQuery` for vendor's services, booking requests
-- `useMutation` for accept/reject booking, add/edit/delete service
+#### Step 2.5.4 — Wire Vendor Dashboard Pages
+- `useQuery` for vendor's services, booking requests, analytics
+- `useMutation` for accept/reject booking, add/edit/delete service, profile updates
 
-#### Step 2.11.5 — Wire Auth (Login/Register)
+#### Step 2.5.5 — Wire Auth (Login/Register)
 - `useMutation` for login — on success, call `authStore.login(user, token)`
 - `useMutation` for register — on success, redirect to login
 - Replace all remaining `localStorage` direct access with `authStore`
 
-#### Step 2.11.6 — Wire Notifications
+#### Step 2.5.6 — Wire Notifications
 - `useQuery(['notifications'], notificationsService.getAll, { refetchInterval: 30000 })` — polling every 30s
 - Update Navbar unread count badge dynamically
 
 ---
 
-### PHASE 2 — STEP 12: Infrastructure Finalization
+### PHASE 2 — LAYER 6: Infrastructure Finalization
 
-#### Step 2.12.1 — Environment Variable Cleanup
+#### Step 2.6.1 — Environment Variable Cleanup
 - Create `client/.env.development` with `VITE_API_BASE_URL=http://localhost:5000`
 - Create `client/.env.production` with `VITE_API_BASE_URL=https://eventat-backend.onrender.com`
 - Remove all hardcoded URLs from every component file
 
-#### Step 2.12.2 — Setup Cloudinary for Image Uploads
+#### Step 2.6.2 — Setup Cloudinary for Image Uploads
 - Create Cloudinary account (free tier for development)
 - Install `multer` + `cloudinary` SDK on server
-- Create `POST /api/upload` endpoint that accepts multipart form data, uploads to Cloudinary, returns URL
-- Frontend file upload component calls this endpoint and stores returned URL
+- Wire up the `upload.controller.js` to process memory storage and upload directly to Cloudinary.
 
-#### Step 2.12.3 — Update GitHub Actions CI/CD
+#### Step 2.6.3 — Update GitHub Actions CI/CD
 - Add `VITE_API_BASE_URL` as a GitHub Actions secret
 - Inject into Vite build step: `VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} npm run build`
 - Add Vercel deployment step after successful build
 
-#### Step 2.12.4 — Database Migrations in CI/CD
+#### Step 2.6.4 — Database Migrations in CI/CD
 - Add migration run step to GitHub Actions: `npm run migrate up`
 - Ensures DB schema is always in sync with code deployments
 
