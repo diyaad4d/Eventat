@@ -5,9 +5,11 @@ import {
   LayoutDashboard, User, Calendar, LogOut,
   Home, Briefcase, Users,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
+import { getUnreadCount } from '../../services/notifications.service';
 import Avatar from '../ui/Avatar';
 import Badge  from '../ui/Badge';
 
@@ -289,6 +291,16 @@ function Navbar() {
   const { getItemCount }                  = useCartStore();
   const cartCount = getItemCount();
 
+  // ── Unread notifications count (polls every 30s, guests skipped) ──
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey:    ['notifications', 'unread-count'],
+    queryFn:     getUnreadCount,
+    enabled:     isAuthenticated,
+    staleTime:   1000 * 30,
+    refetchInterval: 1000 * 30,
+    refetchIntervalInBackground: false,
+  });
+
   // Detect scroll for shadow
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -344,6 +356,7 @@ function Navbar() {
                   <IconButton
                     to={user.role === 'customer' ? '/customer/notifications' : '/vendor/notifications'}
                     icon={<Bell size={19} />}
+                    badge={unreadCount}
                     label="Notifications"
                   />
 

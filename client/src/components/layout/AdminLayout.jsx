@@ -5,7 +5,9 @@ import {
   BarChart2, LogOut, ChevronLeft, ChevronRight,
   Shield, Bell,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../../store/authStore';
+import { getUnreadCount } from '../../services/notifications.service';
 
 const ADMIN_NAV = [
   { to: '/admin/dashboard',   icon: <LayoutDashboard size={18}/>, label: 'Overview'    },
@@ -18,8 +20,18 @@ const ADMIN_NAV = [
 
 function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // ── Unread notifications count (same queryKey as Navbar — React Query deduplicates) ──
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey:    ['notifications', 'unread-count'],
+    queryFn:     getUnreadCount,
+    enabled:     isAuthenticated,
+    staleTime:   1000 * 30,
+    refetchInterval: 1000 * 30,
+    refetchIntervalInBackground: false,
+  });
 
   const handleLogout = () => {
     logout();
@@ -183,8 +195,11 @@ function AdminLayout({ children }) {
               text-[#8B8FA8] hover:text-white hover:border-[var(--color-gold)] 
               transition-colors">
               <Bell size={16} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 
-                rounded-full bg-red-500" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Link>
             {/* Back to site */}
             <Link to="/home"

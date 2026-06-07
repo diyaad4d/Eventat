@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
-  SlidersHorizontal, LayoutGrid, List,
+  LayoutGrid, List,
   ChevronDown, SearchX, RefreshCw, ArrowLeft,
 } from 'lucide-react';
 
 import { EVENT_TYPE_CONFIG } from '../../data/eventTypeConfig';
 import FilterSidebar from '../../components/Services/FilterSidebar';
 import ServiceCard from '../../components/Home/ServiceCard';
-import { MOCK_FEATURED_SERVICES } from '../../components/Home/FeaturedServices';
 import PageTransition from '../../components/shared/PageTransition';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { useDebounce } from '../../hooks/useDebounce';
+import { getServicesByEventType } from '../../services/services.service';
 
 // ─────────────────────────────────────────────────────────────
 //  Constants
@@ -755,35 +757,49 @@ function ChecklistSection({ cfg, eventType }) {
 const FilteredServicesSection = React.memo(function FilteredServicesSection(
   { cfg, eventType, filters, updateFilter, clearFilters, sidebarOpen, setSidebarOpen }
 ) {
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [services,   setServices]   = useState([]);
   const [viewMode,   setViewMode]   = useState('grid');
   const [sortBy,     setSortBy]     = useState('recommended');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [visibleN,   setVisibleN]   = useState(PAGE_SIZE);
+  const [page,       setPage]       = useState(1);
 
-  // FIX 1: sidebarOpen now comes from parent — no local state here
+  // Debounce keyword to avoid refetch on every keystroke
+  const debouncedKeyword = useDebounce(filters.keyword, 400);
 
-  // Simulate API fetch
-  useEffect(() => {
-    setIsLoading(true);
-    setVisibleN(PAGE_SIZE);
-    const t = setTimeout(() => {
-      setServices(MOCK_FEATURED_SERVICES);
-      setIsLoading(false);
-    }, 1200);
-    return () => clearTimeout(t);
-  }, [eventType]);
+  // Build stable query key from filters + debounced fields
+  const queryParams = {
+    ...filters,
+    keyword:  debouncedKeyword,
+    sort:     sortBy,
+    page,
+    limit:    PAGE_SIZE,
+  };
+
+  // React Query v5 — fetch real services by event type
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey:  ['services-by-event-type', eventType, queryParams],
+    queryFn:   () => getServicesByEventType(eventType, queryParams),
+    placeholderData: (prev) => prev,  // keep previous page visible during pagination
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const services   = data?.services   ?? [];
+  const pagination = data?.pagination  ?? {};
+  const totalCount = pagination.total  ?? 0;
 
   const handleFilterChange = useCallback((field, value) => {
     if (field === 'eventType') return; // locked
     updateFilter(field, value);
-    setVisibleN(PAGE_SIZE);
+    setPage(1); // reset to page 1 on any filter change
   }, [updateFilter]);
 
   const handleClear = useCallback(() => {
     clearFilters();
-    setVisibleN(PAGE_SIZE);
+    setPage(1);
   }, [clearFilters]);
 
   const activeCount = [
@@ -795,15 +811,6 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
     filters.rating > 0,
     filters.date,
   ].filter(Boolean).length;
-
-  const activeCategories = filters.categories || [];
-  const filteredMockServices = activeCategories.length === 0
-    ? services 
-    : services.filter(s => activeCategories.includes(s.categorySlug));
-
-  const totalCount   = filteredMockServices.length;
-  const visibleCards = filteredMockServices.slice(0, visibleN);
-  const hasMore      = visibleN < totalCount;
 
   return (
     <section
@@ -1002,11 +1009,28 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
               </div>
             )}
 
+            {/* Error state */}
+            {!isLoading && isError && (
+              <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+                <div className="w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6">
+                  <SearchX size={36} className="text-red-300" />
+                </div>
+                <h3 className="text-xl font-extrabold text-[var(--color-dark)] mb-2">Couldn't load services</h3>
+                <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-8">
+                  There was a problem connecting to the server. Please try again.
+                </p>
+                <button type="button" onClick={handleClear}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] shadow-[0_4px_14px_rgba(201,162,77,0.28)] transition-all duration-200">
+                  <RefreshCw size={15} /> Try Again
+                </button>
+              </div>
+            )}
+
             {/* Empty state */}
-            {!isLoading && totalCount === 0 && <EmptyState onClear={handleClear} />}
+            {!isLoading && !isError && totalCount === 0 && <EmptyState onClear={handleClear} />}
 
             {/* Results grid */}
-            {!isLoading && totalCount > 0 && (
+            {!isLoading && !isError && totalCount > 0 && (
               <>
                 <div
                   className={viewMode === 'grid'
@@ -1014,34 +1038,50 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
                     : 'flex flex-col gap-4'}
                   role="list"
                 >
-                  {visibleCards.map((service, index) => (
-                    <div key={service.id} role="listitem" className="card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
+                  {services.map((service, index) => (
+                    <div key={service.service_id} role="listitem" className="card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
                       <ServiceCard service={service} viewMode={viewMode} />
                     </div>
                   ))}
                 </div>
 
-                {/* Load more */}
-                {hasMore ? (
-                  <div className="flex justify-center mt-10">
+                {/* Pagination */}
+                {(pagination.totalPages ?? 1) > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 mt-10">
                     <button
                       type="button"
-                      onClick={() => setVisibleN((n) => n + PAGE_SIZE)}
-                      className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold border-2 border-[var(--color-gold)] text-[var(--color-gold)] hover:bg-[var(--color-gold)] hover:text-white transition-all duration-200"
-                    >
-                      Load More Services
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--color-gold)]/10 text-xs font-black">
-                        +{totalCount - visibleN}
-                      </span>
-                    </button>
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={!pagination.hasPrev}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold border border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      aria-label="Previous page"
+                    >‹</button>
+                    {Array.from({ length: pagination.totalPages ?? 1 }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        className={[
+                          'inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold border transition-all',
+                          p === page
+                            ? 'border-[var(--color-gold)] bg-[var(--color-gold)] text-white shadow-[0_4px_14px_rgba(201,162,77,0.3)]'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)]',
+                        ].join(' ')}
+                        aria-current={p === page ? 'page' : undefined}
+                      >{p}</button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={!pagination.hasNext}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold border border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      aria-label="Next page"
+                    >›</button>
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center mt-10 gap-2">
-                    <div className="flex items-center gap-3 text-xs text-gray-300">
-                      <div className="h-px w-16 bg-gray-200" />
-                      <span className="font-semibold tracking-wide uppercase">All {totalCount} results shown</span>
-                      <div className="h-px w-16 bg-gray-200" />
-                    </div>
+                )}
+
+                {isFetching && !isLoading && (
+                  <div className="flex justify-center mt-4">
+                    <span className="inline-block w-4 h-4 border-2 border-[var(--color-gold)] border-t-transparent rounded-full animate-spin" aria-label="Loading" />
                   </div>
                 )}
               </>

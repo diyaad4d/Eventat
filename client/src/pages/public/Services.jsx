@@ -1,24 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   SlidersHorizontal, LayoutGrid, List,
   ChevronDown, SearchX, RefreshCw,
 } from 'lucide-react';
 
-import FilterSidebar, { DEFAULT_FILTERS } from '../../components/Services/FilterSidebar';
+import FilterSidebar from '../../components/Services/FilterSidebar';
 import EmptyState from '../../components/shared/EmptyState';
 import PageTransition from '../../components/shared/PageTransition';
 import ServiceCard from '../../components/Home/ServiceCard';
-import { MOCK_FEATURED_SERVICES } from '../../components/Home/FeaturedServices';
 import EventHubHeader from '../../components/Services/EventHubHeader';
 import EventTypeHub from '../../components/Services/EventTypeHub';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { useDebounce } from '../../hooks/useDebounce';
+import { getServices } from '../../services/services.service';
 
 // ─────────────────────────────────────────────────────────────
-//  Mock data — 8 services (full set from FeaturedServices)
-//  Step 3.4 will replace this with URL-driven + real API data.
+//  Constants
 // ─────────────────────────────────────────────────────────────
-const MOCK_SERVICES = MOCK_FEATURED_SERVICES;
-
 const SORT_OPTIONS = [
   { value: 'recommended', label: 'Recommended'        },
   { value: 'price_asc',   label: 'Price: Low to High' },
@@ -27,8 +26,8 @@ const SORT_OPTIONS = [
   { value: 'newest',      label: 'Newest'              },
 ];
 
-// How many cards to show initially and per "Load More" click
-const PAGE_SIZE = 6;
+// How many cards per page
+const PAGE_LIMIT = 12;
 
 // ─────────────────────────────────────────────────────────────
 //  SkeletonCard — matches grid OR list layout
@@ -120,29 +119,125 @@ function MobileFilterDrawer({ isOpen, onClose, filters, onChange, onClear }) {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  Pagination component
+// ─────────────────────────────────────────────────────────────
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  const pages = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  const btnBase = [
+    'inline-flex items-center justify-center',
+    'w-9 h-9 rounded-xl text-sm font-bold',
+    'border transition-all duration-200',
+  ].join(' ');
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-10">
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] disabled:opacity-40 disabled:cursor-not-allowed`}
+        aria-label="Previous page"
+      >
+        ‹
+      </button>
+
+      {start > 1 && (
+        <>
+          <button type="button" onClick={() => onPageChange(1)} className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)]`}>1</button>
+          {start > 2 && <span className="text-gray-400 text-sm font-bold px-1">…</span>}
+        </>
+      )}
+
+      {pages.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onPageChange(p)}
+          className={[
+            btnBase,
+            p === currentPage
+              ? 'border-[var(--color-gold)] bg-[var(--color-gold)] text-white shadow-[0_4px_14px_rgba(201,162,77,0.3)]'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)]',
+          ].join(' ')}
+          aria-current={p === currentPage ? 'page' : undefined}
+        >
+          {p}
+        </button>
+      ))}
+
+      {end < totalPages && (
+        <>
+          {end < totalPages - 1 && <span className="text-gray-400 text-sm font-bold px-1">…</span>}
+          <button type="button" onClick={() => onPageChange(totalPages)} className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)]`}>{totalPages}</button>
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] disabled:opacity-40 disabled:cursor-not-allowed`}
+        aria-label="Next page"
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 //  AllServicesSection — the two-column sidebar + results grid
 //  Extracted so the Services root can compose EventTypeHub above it.
 // ─────────────────────────────────────────────────────────────
-// FIX 2: Wrap in React.memo so filter prop changes don't remount this component
 const AllServicesSection = React.memo(function AllServicesSection({
-  isLoading, services, viewMode, setViewMode,
-  sortBy, setSortBy, filters, handleFilterChange,
-  handleClear, drawerOpen, setDrawerOpen,
-  visibleN, setVisibleN, activeCount,
-  sidebarOpen, setSidebarOpen,
+  filters, sortBy, setSortBy,
+  handleFilterChange, handleClear,
+  viewMode, setViewMode,
+  drawerOpen, setDrawerOpen,
+  activeCount, sidebarOpen, setSidebarOpen,
 }) {
-  // FIX 1: sidebarOpen now comes from parent — no local state here
+  // Build the query params object that drives fetching
+  // sortBy is managed separately and merged here
+  const queryFilters = { ...filters, sort: sortBy, limit: PAGE_LIMIT };
 
-  const filteredServices = services.filter(svc => {
-    if (filters.categories && filters.categories.length > 0) {
-      if (!filters.categories.includes(svc.categorySlug)) return false;
-    }
-    return true;
+  // Debounce text/price inputs to avoid API call per keystroke
+  const debouncedKeyword  = useDebounce(queryFilters.keyword,  400);
+  const debouncedMinPrice = useDebounce(queryFilters.minPrice, 600);
+  const debouncedMaxPrice = useDebounce(queryFilters.maxPrice, 600);
+
+  // Stable query key — only the debounced values trigger a refetch
+  const stableFilters = {
+    ...queryFilters,
+    keyword:  debouncedKeyword,
+    minPrice: debouncedMinPrice,
+    maxPrice: debouncedMaxPrice,
+  };
+
+  // React Query v5 syntax
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey:  ['services', stableFilters],
+    queryFn:   () => getServices(stableFilters),
+    placeholderData: (prev) => prev,   // v5: smooth pagination (keeps previous data visible)
+    staleTime: 1000 * 60 * 2,         // 2 min fresh
   });
 
-  const totalCount   = filteredServices.length;
-  const visibleCards = filteredServices.slice(0, visibleN);
-  const hasMore      = visibleN < totalCount;
+  const services   = data?.services   ?? [];
+  const pagination = data?.pagination  ?? {};
+  const totalCount = pagination.total  ?? 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -270,13 +365,16 @@ const AllServicesSection = React.memo(function AllServicesSection({
                   <>
                     Showing{' '}
                     <span className="font-extrabold text-[var(--color-dark)]">
-                      {Math.min(visibleN, totalCount)}
+                      {services.length}
                     </span>
                     {' '}of{' '}
                     <span className="font-extrabold text-[var(--color-dark)]">
                       {totalCount}
                     </span>{' '}
                     results
+                    {isFetching && !isLoading && (
+                      <span className="ml-2 inline-block w-3.5 h-3.5 border-2 border-[var(--color-gold)] border-t-transparent rounded-full animate-spin align-middle" aria-label="Refreshing" />
+                    )}
                   </>
                 )}
               </p>
@@ -350,7 +448,7 @@ const AllServicesSection = React.memo(function AllServicesSection({
           </div>
 
           {/* ══════════════════════════════════════════════
-              SKELETON LOADER — 6 ghost cards while loading
+              SKELETON LOADER — while loading
           ══════════════════════════════════════════════ */}
           {isLoading && (
             <div
@@ -362,23 +460,47 @@ const AllServicesSection = React.memo(function AllServicesSection({
               aria-busy="true"
               aria-label="Loading services"
             >
-              {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              {Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <SkeletonCard key={i} viewMode={viewMode} />
               ))}
             </div>
           )}
 
           {/* ══════════════════════════════════════════════
+              ERROR STATE
+          ══════════════════════════════════════════════ */}
+          {!isLoading && isError && (
+            <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+              <div className="w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6">
+                <SearchX size={36} className="text-red-300" />
+              </div>
+              <h3 className="text-xl font-extrabold text-[var(--color-dark)] mb-2">
+                Couldn't load services
+              </h3>
+              <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-8">
+                There was a problem connecting to the server. Please check your connection and try again.
+              </p>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] shadow-[0_4px_14px_rgba(201,162,77,0.28)] transition-all duration-200"
+              >
+                <RefreshCw size={15} /> Try Again
+              </button>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════
               EMPTY STATE — no results after loading
           ══════════════════════════════════════════════ */}
-          {!isLoading && totalCount === 0 && (
+          {!isLoading && !isError && services.length === 0 && (
             <EmptyState variant="no-results" onAction={handleClear} />
           )}
 
           {/* ══════════════════════════════════════════════
               RESULTS — grid or list
           ══════════════════════════════════════════════ */}
-          {!isLoading && totalCount > 0 && (
+          {!isLoading && !isError && services.length > 0 && (
             <>
               <div
                 className={
@@ -389,49 +511,19 @@ const AllServicesSection = React.memo(function AllServicesSection({
                 role="list"
                 aria-label="Service results"
               >
-                {visibleCards.map((service, index) => (
-                  <div key={service.id} role="listitem" className="h-full flex card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
+                {services.map((service, index) => (
+                  <div key={service.service_id} role="listitem" className="h-full flex card-stagger" style={{ animationDelay: `${index * 60}ms` }}>
                     <ServiceCard service={service} viewMode={viewMode} className="flex-1" />
                   </div>
                 ))}
               </div>
 
-              {/* ── LOAD MORE button ─────────────────────── */}
-              {hasMore ? (
-                <div className="flex justify-center mt-10">
-                  <button
-                    type="button"
-                    onClick={() => setVisibleN((n) => n + PAGE_SIZE)}
-                    className={[
-                      'inline-flex items-center gap-2.5',
-                      'px-8 py-3.5 rounded-2xl text-sm font-bold',
-                      'border-2 border-[var(--color-gold)] text-[var(--color-gold)]',
-                      'hover:bg-[var(--color-gold)] hover:text-white',
-                      'transition-all duration-200',
-                      'shadow-[0_2px_12px_rgba(201,162,77,0.15)]',
-                      'hover:shadow-[0_4px_20px_rgba(201,162,77,0.30)]',
-                      'focus-visible:outline-none focus-visible:ring-2',
-                      'focus-visible:ring-[var(--color-gold)] focus-visible:ring-offset-2',
-                    ].join(' ')}
-                  >
-                    Load More Services
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--color-gold)]/10 text-xs font-black">
-                      +{totalCount - visibleN}
-                    </span>
-                  </button>
-                </div>
-              ) : (
-                /* All loaded — end of results indicator */
-                <div className="flex flex-col items-center mt-10 gap-2">
-                  <div className="flex items-center gap-3 text-xs text-gray-300">
-                    <div className="h-px w-16 bg-gray-200" aria-hidden="true" />
-                    <span className="font-semibold tracking-wide uppercase">
-                      All {totalCount} results shown
-                    </span>
-                    <div className="h-px w-16 bg-gray-200" aria-hidden="true" />
-                  </div>
-                </div>
-              )}
+              {/* ── PAGINATION ─────────────────────────────── */}
+              <Pagination
+                currentPage={filters.page ?? 1}
+                totalPages={pagination.totalPages ?? 1}
+                onPageChange={(p) => handleFilterChange('page', p)}
+              />
             </>
           )}
 
@@ -442,64 +534,41 @@ const AllServicesSection = React.memo(function AllServicesSection({
 }); // end React.memo(AllServicesSection)
 
 // ─────────────────────────────────────────────────────────────
-//  Services — Phase 1, Steps 3.1–3.3
+//  Services — Step 2.5.1
 //
 //  State:
-//    isLoading : bool    — 1.5s mock delay on mount
-//    services  : array   — mock data (Step 3.4 replaces with API)
+//    filters   : object  — sidebar filter state (from useUrlFilters)
 //    viewMode  : string  — 'grid' | 'list'
-//    sortBy    : string  — selected sort option
-//    filters   : object  — sidebar filter state
-//    visibleN  : number  — how many cards to show (Load More)
+//    sortBy    : string  — selected sort option (separate from filters
+//                          so changing sort doesn't reset page)
 //    drawerOpen: bool    — mobile drawer
+//    sidebarOpen: bool   — desktop sidebar (lifted so filter changes
+//                          don't collapse it)
 // ─────────────────────────────────────────────────────────────
 function Services() {
   // ── Core state ────────────────────────────────────────────
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [services,    setServices]    = useState([]);
   const [viewMode,    setViewMode]    = useState('grid');
   const [sortBy,      setSortBy]      = useState('recommended');
   const [drawerOpen,  setDrawerOpen]  = useState(false);
-  const [visibleN,    setVisibleN]    = useState(PAGE_SIZE);
 
-  // FIX 1: sidebarOpen lifted to page level so filter changes never reset it
+  // FIX: sidebarOpen lifted to page level so filter changes never reset it
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // ── Filter state — single source of truth for both
   //    desktop sidebar and mobile drawer ──────────────────────
   const { filters, updateFilter, clearFilters } = useUrlFilters();
 
-  // ── Simulate API fetch (1.5s) ────────────────────────────
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setServices(MOCK_SERVICES);
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, []);
-
-  // ── Scroll to #all-services on mount if hash is present ──
-  useEffect(() => {
-    if (window.location.hash === '#all-services') {
-      const el = document.getElementById('all-services');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
   // ── Filter handlers ───────────────────────────────────────
+  // Reset page to 1 when any filter other than page changes
   const handleFilterChange = useCallback((field, value) => {
     updateFilter(field, value);
-    setVisibleN(PAGE_SIZE);
+    if (field !== 'page') {
+      updateFilter('page', 1);
+    }
   }, [updateFilter]);
-
-  const handleApply = useCallback(() => {
-    setVisibleN(PAGE_SIZE);   // reset pagination on new filter
-    setDrawerOpen(false);
-  }, []);
 
   const handleClear = useCallback(() => {
     clearFilters();
-    setVisibleN(PAGE_SIZE);
   }, [clearFilters]);
 
   // ── Derived values ────────────────────────────────────────
@@ -575,19 +644,15 @@ function Services() {
           ALL SERVICES SECTION — sidebar + results grid
       ══════════════════════════════════════════════════════ */}
       <AllServicesSection
-        isLoading={isLoading}
-        services={services}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
+        filters={filters}
         sortBy={sortBy}
         setSortBy={setSortBy}
-        filters={filters}
         handleFilterChange={handleFilterChange}
         handleClear={handleClear}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
         drawerOpen={drawerOpen}
         setDrawerOpen={setDrawerOpen}
-        visibleN={visibleN}
-        setVisibleN={setVisibleN}
         activeCount={activeCount}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}

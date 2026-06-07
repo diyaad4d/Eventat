@@ -42,10 +42,14 @@ export const logout = () =>
 
 
 /**
- * Fetch the currently authenticated user's profile.
+ * Fetch the full profile of the authenticated user.
+ * Mounted at GET /users/me (NOT /auth/me) in users.controller.js.
+ * Returns different shapes based on role:
+ *   - vendor:   includes vendor_profiles data (company_name, registration_status, etc.)
+ *   - customer: includes booking counts, event plan counts, etc.
  */
 export const getMe = () =>
-  api.get('/auth/me').then((res) => res.data);
+  api.get('/users/me').then((res) => res.data);
 
 
 // ─────────────────────────────────────────────────────────────
@@ -70,3 +74,39 @@ export const forgotPassword = (data) =>
  */
 export const resetPassword = (data) =>
   api.post('/auth/reset-password', data).then((res) => res.data);
+
+
+// ─────────────────────────────────────────────────────────────
+
+
+/**
+ * Update the current user's profile fields (full_name, phone).
+ * Customer role: also accepts avatar_url (stored on customer_profiles).
+ * @param {{ full_name?: string, phone?: string, avatar_url?: string }} data
+ * @returns {Promise<{ success: boolean, data: { user: object } }>}
+ */
+export const updateMe = (data) =>
+  api.put('/users/me', data).then((res) => res.data);
+
+
+// ─────────────────────────────────────────────────────────────
+
+
+/**
+ * Change the current user's password.
+ * @param {{ current_password: string, new_password: string, confirm_password: string }} data
+ * @returns {Promise<{ success: boolean, message: string }>}
+ */
+export const changePassword = (data) =>
+  api.put('/users/me/password', data).then((res) => res.data);
+
+
+// ─────────────────────────────────────────────────────────────
+
+
+/**
+ * Soft-delete the current user's account (sets is_active = false).
+ * @returns {Promise<{ success: boolean, message: string }>}
+ */
+export const deleteAccount = () =>
+  api.delete('/users/me').then((res) => res.data);

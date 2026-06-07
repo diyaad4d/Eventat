@@ -5,9 +5,11 @@ import {
   Briefcase, ClipboardList, BarChart2, Store,
   LogOut, ChevronLeft, ChevronRight, Menu, X,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
+import vendorService from '../../services/vendor.service';
 import Navbar from './Navbar';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
@@ -75,9 +77,21 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   };
 
   // ── Link renderer ─────────────────────────────────────────
+  // Query: real pending bookings count — only for vendors, polls every 2 min
+  const isVendor = user?.role === 'vendor';
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ['vendor-bookings-pending-count'],
+    queryFn: () =>
+      vendorService
+        .getMyBookings({ status: 'pending', limit: 1 })
+        .then((d) => d?.summary?.pending ?? 0),
+    enabled: isVendor,
+    staleTime: 1000 * 60,
+    refetchInterval: 1000 * 60 * 2, // poll every 2 minutes
+  });
+
   const SidebarLink = ({ item }) => {
     const badgeCount = item.badge === 'cart' ? cartCount : 0;
-    const PENDING_COUNT = 2; // matches MOCK_BOOKINGS Incoming count
 
     return (
       <NavLink
@@ -112,12 +126,12 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--color-gold)]" />
             )}
             
-            {item.label === 'Booking Requests' && !collapsed && (
+            {item.label === 'Booking Requests' && pendingCount > 0 && !collapsed && (
               <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black px-1.5">
-                {PENDING_COUNT}
+                {pendingCount}
               </span>
             )}
-            {item.label === 'Booking Requests' && collapsed && (
+            {item.label === 'Booking Requests' && pendingCount > 0 && collapsed && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
             )}
             

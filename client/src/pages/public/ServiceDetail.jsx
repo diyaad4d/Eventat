@@ -1,70 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, ChevronLeft, X, Star, MapPin, Users, Store, Calendar, ShoppingCart, CreditCard, Phone, MessageCircle } from 'lucide-react';
 import ServiceCard from '../../components/Home/ServiceCard';
+import useAuthStore from '../../store/authStore';
+import { getServiceById } from '../../services/services.service';
+import { getServiceReviews, postReview, checkReviewEligibility } from '../../services/reviews.service';
 
-const MOCK_SERVICE = {
-  id: 's1',
-  title: 'Grand Royal Ballroom',
-  category: 'Venue',
-  subCategory: 'Hotel & Resort',
-  vendorId: 'v1',
-  vendorName: 'Royal Hotels & Resorts',
-  vendorAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&q=80',
-  vendorJoined: '5 years on Eventat',
-  location: 'Amman, 5th Circle',
-  capacity: 'Up to 500 guests',
-  price: 150,
-  pricingUnit: 'per_hour',
-  rating: 4.8,
-  reviewCount: 124,
-  contactPhone: '+962 7 8123 4567',
-  description: 'Experience unparalleled luxury at the Grand Royal Ballroom. Perfect for grand weddings and prestigious corporate galas, our venue features crystal chandeliers, state-of-the-art acoustic systems, and customizable mood lighting.\n\nOur dedicated event coordination team ensures every detail is flawless, from gourmet catering options to bespoke floral arrangements. The venue includes a private bridal suite, VIP entrance, and complimentary valet parking for up to 200 vehicles.\n\nWe pride ourselves on delivering an unforgettable experience tailored to your exact vision.',
-  images: [
-    'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80',
-    'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&q=80',
-    'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&q=80',
-    'https://images.unsplash.com/photo-1525258946800-98ccd7a0ea00?w=1200&q=80',
-    'https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=1200&q=80',
-    'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1200&q=80',
-  ],
-};
-
-const MOCK_REVIEWS = [
-  { id:'r1', reviewerName:'Sarah Al-Ahmad', reviewerAvatar:'https://i.pravatar.cc/150?img=47', date:'March 15, 2025', rating:5, text:"Absolutely stunning venue! The Grand Royal Ballroom exceeded all our expectations. The staff was incredibly professional and the lighting was magical. Our guests are still talking about it." },
-  { id:'r2', reviewerName:'Omar Khalil', reviewerAvatar:'https://i.pravatar.cc/150?img=12', date:'February 2, 2025', rating:5, text:"Perfect for our corporate gala. The AV setup was world-class and the catering team was flawless. Will definitely book again for our next event." },
-  { id:'r3', reviewerName:'Lina Nasser', reviewerAvatar:'https://i.pravatar.cc/150?img=32', date:'January 20, 2025', rating:4, text:"Beautiful space with great service. Minor delay in setup but the team resolved it quickly. Overall a wonderful experience for our wedding reception." },
-  { id:'r4', reviewerName:'Kareem Mansour', reviewerAvatar:'https://i.pravatar.cc/150?img=68', date:'December 10, 2024', rating:4, text:"The venue is as grand as it looks in photos. Parking was slightly challenging but the valet service helped. The bridal suite was a lovely touch." },
-  { id:'r5', reviewerName:'Rania Haddad', reviewerAvatar:'https://i.pravatar.cc/150?img=25', date:'November 5, 2024', rating:5, text:"We hosted our daughter's wedding here and it was a dream come true. Every detail was handled with care. Highly recommend to anyone looking for a luxurious venue." },
-];
-
-const RATING_BREAKDOWN = [
-  { stars:5, count:75 },
-  { stars:4, count:37 },
-  { stars:3, count:9  },
-  { stars:2, count:2  },
-  { stars:1, count:1  },
-];
-
-const MOCK_USER = {
-  isLoggedIn: true,
-  hasBooking: false,
-  name: 'You',
-  avatar: 'https://i.pravatar.cc/150?img=5',
-};
-
-const SIMILAR_SERVICES = [
-  { id: 's2', title: 'The Pearl Ballroom', category: 'Venue', categorySlug: 'venue', location: 'Amman, Abdoun', basePrice: 120, pricingUnit: 'per_hour', rating: 4.7, reviewCount: 98, image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=600&q=80', vendorName: 'Pearl Events' },
-  { id: 's3', title: 'Zara Gardens Event Hall', category: 'Venue', categorySlug: 'venue', location: 'Amman, Dabouq', basePrice: 80, pricingUnit: 'per_hour', rating: 4.6, reviewCount: 74, image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80', vendorName: 'Zara Co.' },
-  { id: 's4', title: 'Crystal Palace Venue', category: 'Venue', categorySlug: 'venue', location: 'Amman, Sweifieh', basePrice: 200, pricingUnit: 'per_hour', rating: 4.9, reviewCount: 156, image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80', vendorName: 'Crystal Inc.' },
-  { id: 's5', title: 'Hilltop Terrace Lounge', category: 'Venue', categorySlug: 'venue', location: 'Amman, Jabal Amman', basePrice: 95, pricingUnit: 'per_hour', rating: 4.5, reviewCount: 61, image: 'https://images.unsplash.com/photo-1525258946800-98ccd7a0ea00?w=600&q=80', vendorName: 'Hilltop Events' },
-  { id: 's6', title: 'Royal Oaks Manor', category: 'Venue', categorySlug: 'venue', location: 'Amman, Um Uthaina', basePrice: 175, pricingUnit: 'per_hour', rating: 4.8, reviewCount: 112, image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&q=80', vendorName: 'Royal Oaks' },
-  { id: 's7', title: 'Moonrise Event Space', category: 'Venue', categorySlug: 'venue', location: 'Amman, Khalda', basePrice: 65, pricingUnit: 'per_hour', rating: 4.4, reviewCount: 43, image: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=600&q=80', vendorName: 'Moonrise Co.' },
-];
-
-function ReviewsSection({ service, reviews, user }) {
-  const totalCount = RATING_BREAKDOWN.reduce((s, r) => s + r.count, 0);
-  const avgRating  = service.rating;
+// ─────────────────────────────────────────────────────────────
+//  ReviewsSection — Reviews summary + write a review form
+//  Props:
+//    service      object  — must have avg_rating, review_count
+//    reviews      array   — from reviewsData (paginated query)
+//    breakdown    array   — [{ rating, count, percentage }] from summary
+//    totalReviews number  — from summary.total_reviews
+//    user         object  — { isLoggedIn, hasBooking, name, avatar }
+//    canReview    bool    — from eligibility query
+//    hasReviewed  bool    — from eligibility query
+//    onSubmit     fn      — (data) => submitReviewMutation.mutate(data)
+//    isSubmitting bool
+//    submitError  string|null
+// ─────────────────────────────────────────────────────────────
+function ReviewsSection({
+  service,
+  reviews,
+  breakdown,
+  totalReviews,
+  user,
+  canReview,
+  hasReviewed,
+  onSubmit,
+  isSubmitting,
+  submitError,
+}) {
+  const avgRating = parseFloat(service?.avg_rating) || 0;
 
   const [hoverStar,  setHoverStar]  = useState(0);
   const [userRating, setUserRating] = useState(0);
@@ -73,6 +42,24 @@ function ReviewsSection({ service, reviews, user }) {
   const [showAllModal, setShowAllModal] = useState(false);
 
   const canSubmit = userRating > 0 && reviewText.trim().length > 0;
+
+  // Reset form when navigating to a different service
+  useEffect(() => {
+    setSubmitted(false);
+    setUserRating(0);
+    setReviewText('');
+  }, [service?.service_id]);
+
+  // Detect successful submission: isSubmitting just flipped false and there's no error
+  const prevSubmitting = React.useRef(false);
+  useEffect(() => {
+    if (prevSubmitting.current && !isSubmitting && !submitError) {
+      setSubmitted(true);
+      setUserRating(0);
+      setReviewText('');
+    }
+    prevSubmitting.current = isSubmitting;
+  }, [isSubmitting, submitError]);
 
   useEffect(() => {
     if (showAllModal) {
@@ -84,12 +71,17 @@ function ReviewsSection({ service, reviews, user }) {
       document.querySelector('nav')?.style.removeProperty('display');
       document.querySelector('header')?.style.removeProperty('display');
     }
-    return () => { 
-      document.body.style.overflow = 'auto'; 
+    return () => {
+      document.body.style.overflow = 'auto';
       document.querySelector('nav')?.style.removeProperty('display');
       document.querySelector('header')?.style.removeProperty('display');
     };
   }, [showAllModal]);
+
+  const handleSubmit = () => {
+    if (!canSubmit || isSubmitting) return;
+    onSubmit({ rating: userRating, review_text: reviewText.trim() });
+  };
 
   return (
     <section id="reviews" className="mt-12 pt-10 border-t border-gray-200">
@@ -105,7 +97,7 @@ function ReviewsSection({ service, reviews, user }) {
         {/* Big average number */}
         <div className="flex flex-col items-center min-w-[80px]">
           <span className="text-6xl font-black text-[var(--color-dark)] leading-none">
-            {avgRating}
+            {avgRating.toFixed(1)}
           </span>
           <div className="flex gap-0.5 my-2">
             {[1,2,3,4,5].map(s => (
@@ -116,28 +108,25 @@ function ReviewsSection({ service, reviews, user }) {
               />
             ))}
           </div>
-          <span className="text-xs text-gray-500">{totalCount} reviews</span>
+          <span className="text-xs text-gray-500">{totalReviews} reviews</span>
         </div>
 
         {/* Bar chart breakdown */}
         <div className="flex-1 min-w-[200px] flex flex-col gap-2">
-          {RATING_BREAKDOWN.map(({ stars, count }) => {
-            const pct = Math.round((count / totalCount) * 100);
-            return (
-              <div key={stars} className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700 w-7">
-                  {stars}★
-                </span>
-                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#E8C97A] to-[#C9A24D] transition-all duration-700"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-500 w-9">{pct}%</span>
+          {breakdown.map(({ rating: stars, count, percentage }) => (
+            <div key={stars} className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700 w-7">
+                {stars}★
+              </span>
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#E8C97A] to-[#C9A24D] transition-all duration-700"
+                  style={{ width: `${percentage}%` }}
+                />
               </div>
-            );
-          })}
+              <span className="text-xs text-gray-500 w-9">{percentage}%</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -145,21 +134,23 @@ function ReviewsSection({ service, reviews, user }) {
       <div className="flex flex-col gap-4 mb-10">
         {reviews.slice(0, 3).map((review) => (
           <div
-            key={review.id}
+            key={review.review_id}
             className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
           >
             {/* Reviewer header */}
             <div className="flex items-center gap-3 mb-3">
               <img
-                src={review.reviewerAvatar}
-                alt={review.reviewerName}
+                src={review.reviewer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.reviewer_name || 'User')}&background=E8C97A&color=fff`}
+                alt={review.reviewer_name}
                 className="w-11 h-11 rounded-full object-cover shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-[15px] text-[var(--color-dark)] truncate">
-                  {review.reviewerName}
+                  {review.reviewer_name || 'Anonymous'}
                 </p>
-                <p className="text-xs text-gray-400">{review.date}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
               </div>
               <div className="flex gap-0.5 shrink-0">
                 {[1,2,3,4,5].map(s => (
@@ -171,7 +162,7 @@ function ReviewsSection({ service, reviews, user }) {
                 ))}
               </div>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">{review.text}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{review.review_text}</p>
           </div>
         ))}
         {reviews.length > 3 && (
@@ -186,7 +177,61 @@ function ReviewsSection({ service, reviews, user }) {
       </div>
 
       {/* ── Write a Review ── */}
-      {user.isLoggedIn && user.hasBooking && (
+
+      {/* Not logged in */}
+      {!user.isLoggedIn && (
+        <div className="flex items-center gap-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
+          <div className="text-3xl shrink-0">👤</div>
+          <div>
+            <p className="font-bold text-[var(--color-dark)] text-sm mb-0.5">
+              Sign in to write a review
+            </p>
+            <p className="text-xs text-gray-500">
+              You need to be logged in to share your experience.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Logged in, no booking */}
+      {user.isLoggedIn && !canReview && !hasReviewed && (
+        <div className="flex items-center gap-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
+          <div className="text-3xl shrink-0">🔒</div>
+          <div>
+            <p className="font-bold text-[var(--color-dark)] text-sm mb-0.5">
+              Only verified guests can leave a review
+            </p>
+            <p className="text-xs text-gray-500">
+              Book this service first, then share your experience after your event.
+            </p>
+          </div>
+          <Link
+            to="#booking"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="shrink-0 px-4 py-2 rounded-xl bg-[var(--color-gold)] text-white text-sm font-bold hover:bg-[var(--color-gold-dark)] transition-colors"
+          >
+            Book Now
+          </Link>
+        </div>
+      )}
+
+      {/* Logged in, already reviewed */}
+      {user.isLoggedIn && hasReviewed && (
+        <div className="flex items-center gap-4 p-5 bg-[#FDF6EC] border border-[#E8C97A66] rounded-2xl">
+          <div className="text-3xl shrink-0">✅</div>
+          <div>
+            <p className="font-bold text-[var(--color-dark)] text-sm mb-0.5">
+              You've already reviewed this service
+            </p>
+            <p className="text-xs text-gray-500">
+              Thank you for sharing your experience!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Logged in, eligible to review */}
+      {user.isLoggedIn && canReview && (
         <>
           {!submitted ? (
             <div className="bg-white border border-[#E8C97A66] rounded-2xl p-6 sm:p-8 shadow-[0_2px_16px_rgba(201,162,77,0.08)]">
@@ -232,19 +277,24 @@ function ReviewsSection({ service, reviews, user }) {
                 className="w-full px-4 py-3 text-sm font-[inherit] text-[var(--color-dark)] border-[1.5px] border-gray-200 rounded-xl outline-none resize-y mb-5 transition-colors duration-200 focus:border-[var(--color-gold)]"
               />
 
+              {/* Error message */}
+              {submitError && (
+                <p className="text-sm text-red-500 font-medium mb-3">{submitError}</p>
+              )}
+
               {/* Submit */}
               <button
                 type="button"
-                onClick={() => { if (canSubmit) setSubmitted(true); }}
-                disabled={!canSubmit}
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
                 className={[
                   'px-8 py-3 rounded-xl font-bold text-[15px] border-none transition-all duration-200',
-                  canSubmit
+                  canSubmit && !isSubmitting
                     ? 'bg-[var(--color-gold)] text-white cursor-pointer shadow-[0_4px_14px_rgba(201,162,77,0.3)] hover:bg-[var(--color-gold-dark)]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed',
                 ].join(' ')}
               >
-                Submit Review
+                {isSubmitting ? 'Submitting…' : 'Submit Review'}
               </button>
             </div>
 
@@ -263,41 +313,6 @@ function ReviewsSection({ service, reviews, user }) {
         </>
       )}
 
-      {user.isLoggedIn && !user.hasBooking && (
-        <div className="flex items-center gap-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-          <div className="text-3xl shrink-0">🔒</div>
-          <div>
-            <p className="font-bold text-[var(--color-dark)] text-sm mb-0.5">
-              Only verified guests can leave a review
-            </p>
-            <p className="text-xs text-gray-500">
-              Book this service first, then share your experience after your event.
-            </p>
-          </div>
-          <Link
-            to="#booking"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="shrink-0 px-4 py-2 rounded-xl bg-[var(--color-gold)] text-white text-sm font-bold hover:bg-[var(--color-gold-dark)] transition-colors"
-          >
-            Book Now
-          </Link>
-        </div>
-      )}
-
-      {!user.isLoggedIn && (
-        <div className="flex items-center gap-4 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
-          <div className="text-3xl shrink-0">👤</div>
-          <div>
-            <p className="font-bold text-[var(--color-dark)] text-sm mb-0.5">
-              Sign in to write a review
-            </p>
-            <p className="text-xs text-gray-500">
-              You need to be logged in to share your experience.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Modal implementation */}
       {showAllModal && (
         <div
@@ -311,7 +326,7 @@ function ReviewsSection({ service, reviews, user }) {
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <h3 className="text-lg font-extrabold text-[var(--color-dark)]">
-                All Reviews ({reviews.length})
+                All Reviews ({totalReviews})
               </h3>
               <button
                 type="button"
@@ -326,20 +341,22 @@ function ReviewsSection({ service, reviews, user }) {
             <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-4">
               {reviews.map((review) => (
                 <div
-                  key={review.id}
+                  key={review.review_id}
                   className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <img
-                      src={review.reviewerAvatar}
-                      alt={review.reviewerName}
+                      src={review.reviewer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.reviewer_name || 'User')}&background=E8C97A&color=fff`}
+                      alt={review.reviewer_name}
                       className="w-11 h-11 rounded-full object-cover shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[15px] text-[var(--color-dark)] truncate">
-                        {review.reviewerName}
+                        {review.reviewer_name || 'Anonymous'}
                       </p>
-                      <p className="text-xs text-gray-400">{review.date}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
                     </div>
                     <div className="flex gap-0.5 shrink-0">
                       {[1,2,3,4,5].map(s => (
@@ -351,7 +368,7 @@ function ReviewsSection({ service, reviews, user }) {
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{review.text}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed">{review.review_text}</p>
                 </div>
               ))}
             </div>
@@ -401,7 +418,7 @@ function LocationSection({ location }) {
   );
 }
 
-function SimilarServicesSection({ category }) {
+function SimilarServicesSection({ category, services }) {
   const scrollRef = useRef(null);
 
   const scroll = (direction) => {
@@ -413,6 +430,8 @@ function SimilarServicesSection({ category }) {
       behavior: 'smooth',
     });
   };
+
+  if (!services || services.length === 0) return null;
 
   return (
     <section className="mt-12 pt-10 border-t border-gray-200">
@@ -431,7 +450,7 @@ function SimilarServicesSection({ category }) {
         {/* Right side: arrows + view all link */}
         <div className="flex items-center gap-3 mb-1">
           <Link
-            to={`/services?category=${encodeURIComponent(category.toLowerCase())}`}
+            to={`/services?categories=${encodeURIComponent(category?.toLowerCase() ?? '')}`}
             className="text-sm font-semibold text-[var(--color-gold)] hover:text-[var(--color-gold-dark)] underline underline-offset-2 transition-colors duration-200"
           >
             View All →
@@ -448,8 +467,8 @@ function SimilarServicesSection({ category }) {
 
         <div ref={scrollRef} className="similar-scroll flex gap-5 overflow-x-auto pb-6 -mx-4 px-4 sm:-mx-6 sm:px-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <style>{`.similar-scroll::-webkit-scrollbar { display: none; }`}</style>
-          {SIMILAR_SERVICES.map((s) => (
-            <div key={s.id} className="w-[260px] sm:w-[280px] shrink-0">
+          {services.map((s) => (
+            <div key={s.service_id} className="w-[260px] sm:w-[280px] shrink-0">
               <ServiceCard service={s} viewMode="grid" />
             </div>
           ))}
@@ -464,44 +483,160 @@ function SimilarServicesSection({ category }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+//  ServiceDetailSkeleton — shown while service loads
+// ─────────────────────────────────────────────────────────────
+function ServiceDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-[var(--color-surface)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
+        {/* Breadcrumb skeleton */}
+        <div className="h-4 w-48 bg-gray-200 rounded mb-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Left col */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="aspect-[16/9] bg-gray-200 rounded-2xl" />
+            <div className="grid grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="aspect-[4/3] bg-gray-200 rounded-xl" />
+              ))}
+            </div>
+            <div className="h-8 w-2/3 bg-gray-200 rounded" />
+            <div className="h-4 w-1/2 bg-gray-100 rounded" />
+            <div className="h-24 bg-gray-100 rounded" />
+          </div>
+          {/* Right col */}
+          <div className="lg:col-span-4">
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6">
+              <div className="h-8 w-1/2 bg-gray-200 rounded" />
+              <div className="h-24 bg-gray-100 rounded-xl" />
+              <div className="h-12 bg-gray-200 rounded-xl" />
+              <div className="h-12 bg-gray-200 rounded-xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ServiceDetail — Step 2.5.2
+//  Route: /service/:serviceId
+// ─────────────────────────────────────────────────────────────
 function ServiceDetail() {
   const { serviceId } = useParams();
-  const service = MOCK_SERVICE; // using mock data
+  const navigate      = useNavigate();
+  const queryClient   = useQueryClient();
 
+  // Auth state
+  const user = useAuthStore((s) => s.user);
+  const isLoggedIn = !!user;
+
+  // ── State: image gallery ────────────────────────────────────
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeImage = service.images[activeIndex];
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  useEffect(() => { 
-    setZoom(1); 
-    setPan({ x: 0, y: 0 }); 
-  }, [activeIndex]);
-
+  // ── State: booking form ─────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [specialRequests, setSpecialRequests] = useState('');
 
-  const isFixedPrice = service.pricingUnit === 'per_event';
-  const totalPrice = isFixedPrice ? service.price : service.price * quantity;
+  // ── State: review form ──────────────────────────────────────
+  // Note: 'submitted' success state is managed inside ReviewsSection itself.
+  const [reviewError, setReviewError] = useState('');
 
-  const getUnitLabels = (unit) => {
-    switch(unit) {
-      case 'per_person': return { inputLabel: 'GUESTS', mathLabel: 'guests' };
-      case 'per_hour': return { inputLabel: 'HOURS', mathLabel: 'hours' };
-      case 'per_day': return { inputLabel: 'DAYS', mathLabel: 'days' };
-      case 'per_item': return { inputLabel: 'QUANTITY', mathLabel: 'items' };
-      case 'per_event': return { inputLabel: 'EVENT', mathLabel: 'event' };
-      default: return { inputLabel: 'QUANTITY', mathLabel: 'units' };
+  // ── React Query v5: service detail ─────────────────────────
+  const {
+    data:      serviceData,
+    isLoading: serviceLoading,
+    isError:   serviceError,
+  } = useQuery({
+    queryKey: ['service', serviceId],
+    queryFn:  () => getServiceById(serviceId),
+    enabled:  !!serviceId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const service         = serviceData?.service        ?? null;
+  const images          = serviceData?.images         ?? [];
+  const initialReviews  = serviceData?.reviews        ?? [];  // first 5 from detail endpoint
+  const similarServices = serviceData?.similarServices ?? [];
+
+  // ── React Query v5: full reviews (paginated) ────────────────
+  const {
+    data: reviewsData,
+  } = useQuery({
+    queryKey: ['reviews', serviceId],
+    queryFn:  () => getServiceReviews(serviceId),
+    enabled:  !!serviceId,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  // Prefer full reviews list; fall back to the 5 from detail endpoint
+  const reviews     = reviewsData?.reviews             ?? initialReviews;
+  const reviewSummary = reviewsData?.summary;
+  const totalReviews  = reviewSummary?.total_reviews   ?? parseInt(service?.review_count) ?? 0;
+
+  // Breakdown — prefer from reviews API, fall back to compute from reviews array
+  const breakdown = reviewSummary?.breakdown
+    ?? [5,4,3,2,1].map(star => ({
+        rating:     star,
+        count:      reviews.filter(r => r.rating === star).length,
+        percentage: totalReviews > 0
+          ? Math.round((reviews.filter(r => r.rating === star).length / totalReviews) * 100)
+          : 0,
+      }));
+
+  // ── React Query v5: review eligibility ─────────────────────
+  const { data: eligibilityData } = useQuery({
+    queryKey: ['review-eligibility', serviceId],
+    queryFn:  () => checkReviewEligibility(serviceId),
+    enabled:  isLoggedIn && !!serviceId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const canReview   = eligibilityData?.canReview   ?? false;
+  const hasReviewed = eligibilityData?.hasReviewed ?? false;
+
+  // ── React Query v5: submit review mutation ──────────────────
+  const submitReviewMutation = useMutation({
+    mutationFn: (reviewData) => postReview(serviceId, reviewData),
+    onSuccess: () => {
+      // Invalidate → auto-refetch reviews + service (avg_rating updated)
+      queryClient.invalidateQueries({ queryKey: ['reviews', serviceId] });
+      queryClient.invalidateQueries({ queryKey: ['service', serviceId] });
+      queryClient.invalidateQueries({ queryKey: ['review-eligibility', serviceId] });
+      setReviewError(''); // clear any previous error
+      // ReviewsSection detects success via isSubmitting flip — no setState here
+    },
+    onError: (err) => {
+      const message = err.response?.data?.error
+        ?? 'Failed to submit review. Please try again.';
+      setReviewError(message);
+    },
+  });
+
+  // ── Document title ─────────────────────────────────────────
+  useEffect(() => {
+    if (service?.title) {
+      document.title = `${service.title} | Eventat`;
     }
-  };
-  const { inputLabel, mathLabel } = getUnitLabels(service.pricingUnit);
+    return () => { document.title = 'Eventat'; };
+  }, [service?.title]);
 
-  const nextImage = () => setActiveIndex((prev) => (prev + 1) % service.images.length);
-  const prevImage = () => setActiveIndex((prev) => (prev - 1 + service.images.length) % service.images.length);
+  // ── Image gallery helpers ───────────────────────────────────
+  // Build image URL array from images array (objects with image_url)
+  const imageUrls = images.map(img => img.image_url);
+
+  useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, [activeIndex]);
+
+  const nextImage = () => setActiveIndex((prev) => (prev + 1) % Math.max(1, imageUrls.length));
+  const prevImage = () => setActiveIndex((prev) => (prev - 1 + Math.max(1, imageUrls.length)) % Math.max(1, imageUrls.length));
 
   // Stop body scroll when lightbox is open
   useEffect(() => {
@@ -536,9 +671,55 @@ function ServiceDetail() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isLightboxOpen]);
 
-  const maxThumbnails = 4;
-  const visibleThumbnails = service.images.slice(0, maxThumbnails);
-  const remainingImagesCount = service.images.length - maxThumbnails;
+  // ── Loading / error states ──────────────────────────────────
+  if (serviceLoading) {
+    return <ServiceDetailSkeleton />;
+  }
+
+  if (serviceError || !service) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface)]">
+        <div className="text-center px-4">
+          <div className="text-6xl mb-6">🔍</div>
+          <h2 className="text-2xl font-extrabold text-[var(--color-dark)] mb-2">
+            Service not found
+          </h2>
+          <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+            This service may have been removed or is unavailable. Browse our other services below.
+          </p>
+          <button
+            onClick={() => navigate('/services')}
+            className="px-6 py-3 bg-[var(--color-gold)] text-white rounded-xl font-bold hover:bg-[var(--color-gold-dark)] transition-colors shadow-[0_4px_14px_rgba(201,162,77,0.3)]"
+          >
+            Browse Services
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Derived values from real service ───────────────────────
+  const activeImage      = imageUrls[activeIndex] ?? service.primary_image_url ?? '';
+  const maxThumbnails    = 4;
+  const visibleThumbnails = imageUrls.slice(0, maxThumbnails);
+  const remainingImagesCount = imageUrls.length - maxThumbnails;
+
+  const isFixedPrice = service.pricing_unit === 'per_event';
+  const totalPrice   = isFixedPrice
+    ? parseFloat(service.base_price)
+    : parseFloat(service.base_price) * quantity;
+
+  const getUnitLabels = (unit) => {
+    switch(unit) {
+      case 'per_person': return { inputLabel: 'GUESTS',   mathLabel: 'guests' };
+      case 'per_hour':   return { inputLabel: 'HOURS',    mathLabel: 'hours'  };
+      case 'per_day':    return { inputLabel: 'DAYS',     mathLabel: 'days'   };
+      case 'per_item':   return { inputLabel: 'QUANTITY', mathLabel: 'items'  };
+      case 'per_event':  return { inputLabel: 'EVENT',    mathLabel: 'event'  };
+      default:           return { inputLabel: 'QUANTITY', mathLabel: 'units'  };
+    }
+  };
+  const { inputLabel, mathLabel } = getUnitLabels(service.pricing_unit);
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
@@ -550,7 +731,12 @@ function ServiceDetail() {
           <ChevronRight size={14} />
           <Link to="/services" className="hover:text-[var(--color-gold)] transition-colors">Services</Link>
           <ChevronRight size={14} />
-          <span className="hover:text-[var(--color-gold)] transition-colors cursor-pointer">{service.category}</span>
+          <Link
+            to={`/services?categories=${service.category?.slug ?? ''}`}
+            className="hover:text-[var(--color-gold)] transition-colors"
+          >
+            {service.category?.name ?? ''}
+          </Link>
           <ChevronRight size={14} />
           <span className="text-gray-400 truncate max-w-[200px]">{service.title}</span>
         </nav>
@@ -577,34 +763,36 @@ function ServiceDetail() {
               </div>
 
               {/* Thumbnails */}
-              <div className="grid grid-cols-4 gap-3">
-                {visibleThumbnails.map((img, index) => {
-                  const isLast = index === maxThumbnails - 1;
-                  const isActive = activeIndex === index;
-                  return (
-                    <div 
-                      key={index} 
-                      className={`relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${isActive ? 'ring-2 ring-[var(--color-gold)] ring-offset-2' : 'opacity-70 hover:opacity-100'}`}
-                      onClick={() => setActiveIndex(index)}
-                    >
-                      <img src={img} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
-                      
-                      {/* "+X more" overlay on the 4th thumbnail if there are more images */}
-                      {isLast && remainingImagesCount > 0 && (
-                        <div 
-                          className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm sm:text-base backdrop-blur-[2px]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsLightboxOpen(true);
-                          }}
-                        >
-                          +{remainingImagesCount} more
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {visibleThumbnails.length > 0 && (
+                <div className="grid grid-cols-4 gap-3">
+                  {visibleThumbnails.map((img, index) => {
+                    const isLast = index === maxThumbnails - 1;
+                    const isActive = activeIndex === index;
+                    return (
+                      <div 
+                        key={index} 
+                        className={`relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${isActive ? 'ring-2 ring-[var(--color-gold)] ring-offset-2' : 'opacity-70 hover:opacity-100'}`}
+                        onClick={() => setActiveIndex(index)}
+                      >
+                        <img src={img} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                        
+                        {/* "+X more" overlay on the 4th thumbnail if there are more images */}
+                        {isLast && remainingImagesCount > 0 && (
+                          <div 
+                            className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm sm:text-base backdrop-blur-[2px]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsLightboxOpen(true);
+                            }}
+                          >
+                            +{remainingImagesCount} more
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Service Info Panel */}
@@ -612,11 +800,11 @@ function ServiceDetail() {
               {/* Header Row (Badges) */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  {service.category}
+                  {service.category?.name ?? ''}
                 </span>
-                {service.subCategory && (
+                {service.subcategory && (
                   <span className="bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                    {service.subCategory}
+                    {service.subcategory.name}
                   </span>
                 )}
               </div>
@@ -631,36 +819,40 @@ function ServiceDetail() {
                 {/* Location */}
                 <div className="flex items-center gap-2">
                   <MapPin size={18} className="text-gray-400" aria-hidden="true" />
-                  <span>{service.location}</span>
+                  <span>{service.city ?? service.service_location ?? ''}</span>
                 </div>
 
                 {/* Rating */}
                 <div className="flex items-center gap-2">
                   <Star size={18} className="text-[var(--color-gold)]" fill="currentColor" aria-hidden="true" />
-                  <span>{service.rating}</span>
+                  <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
                   <a href="#reviews" className="text-gray-400 hover:text-[var(--color-dark)] hover:underline transition-colors ml-1">
-                    ({service.reviewCount} reviews)
+                    ({service.review_count} reviews)
                   </a>
                 </div>
 
                 {/* Capacity */}
-                <div className="flex items-center gap-2">
-                  <Users size={18} className="text-gray-400" aria-hidden="true" />
-                  <span>{service.capacity}</span>
-                </div>
+                {service.capacity && (
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-gray-400" aria-hidden="true" />
+                    <span>Up to {service.capacity} guests</span>
+                  </div>
+                )}
               </div>
 
               {/* Vendor Block */}
               <div className="flex flex-wrap items-center justify-between gap-4 my-8 p-4 sm:p-5 border border-gray-100 rounded-2xl bg-gray-50/50">
                 <div className="flex items-center gap-4">
-                  <Link to={`/vendors/${service.vendorId}`} className="shrink-0">
-                    <img src={service.vendorAvatar} alt={service.vendorName} className="w-14 h-14 rounded-full object-cover border border-gray-200 shadow-sm transition-transform hover:scale-105" />
+                  <Link to={`/vendors/${service.vendor?.vendor_id}`} className="shrink-0">
+                    <div className="w-14 h-14 rounded-full bg-[var(--color-gold)]/10 border border-gray-200 shadow-sm flex items-center justify-center">
+                      <Store size={24} className="text-[var(--color-gold)]" />
+                    </div>
                   </Link>
                   <div className="flex flex-col">
                     <h2 className="text-lg font-bold text-[var(--color-dark)]">
-                      Hosted by <Link to={`/vendors/${service.vendorId}`} className="hover:underline">{service.vendorName}</Link>
+                      Hosted by <Link to={`/vendors/${service.vendor?.vendor_id}`} className="hover:underline">{service.vendor?.name ?? ''}</Link>
                     </h2>
-                    <span className="text-sm text-gray-500">Verified Vendor &middot; {service.vendorJoined}</span>
+                    <span className="text-sm text-gray-500">Verified Vendor · {service.vendor?.city ?? ''}</span>
                   </div>
                 </div>
                 <button className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[var(--color-dark)] hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] transition-all flex items-center gap-2 shadow-sm">
@@ -674,7 +866,7 @@ function ServiceDetail() {
                 About this service
               </h2>
               <div className="prose prose-gray max-w-none text-gray-600 leading-relaxed">
-                {service.description.split('\n\n').map((paragraph, i) => (
+                {(service.description ?? '').split('\n\n').map((paragraph, i) => (
                   <p key={i} className="mb-4">{paragraph}</p>
                 ))}
               </div>
@@ -688,13 +880,13 @@ function ServiceDetail() {
               {/* Header Row */}
               <div className="flex justify-between items-end">
                 <div>
-                  <span className="text-2xl font-extrabold text-[var(--color-dark)]">{service.price.toLocaleString()} JOD</span>
+                  <span className="text-2xl font-extrabold text-[var(--color-dark)]">{parseFloat(service.base_price || 0).toLocaleString()} JOD</span>
                   <span className="text-gray-500 font-medium text-sm"> / {mathLabel}</span>
                 </div>
                 <div className="flex items-center gap-1 text-sm font-bold text-[var(--color-dark)] mb-1">
                   <Star size={14} className="text-[var(--color-gold)]" fill="currentColor" />
-                  <span>{service.rating}</span>
-                  <span className="text-gray-500 font-normal underline">({service.reviewCount})</span>
+                  <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
+                  <span className="text-gray-500 font-normal underline">({service.review_count})</span>
                 </div>
               </div>
 
@@ -738,8 +930,8 @@ function ServiceDetail() {
               {/* Live Price Breakdown */}
               <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600">
                 <div className="flex justify-between">
-                  <span>{service.price.toLocaleString()} JOD x {quantity} {mathLabel}</span>
-                  <span>{totalPrice.toLocaleString()} JOD</span>
+                  <span>{parseFloat(service.base_price || 0).toLocaleString()} JOD x {quantity} {mathLabel}</span>
+                  <span>{(isNaN(totalPrice) ? 0 : totalPrice).toLocaleString()} JOD</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Service Fee</span>
@@ -748,29 +940,30 @@ function ServiceDetail() {
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-base font-extrabold text-[var(--color-dark)]">
                   <span>Total</span>
-                  <span>{totalPrice.toLocaleString()} JOD</span>
+                  <span>{(isNaN(totalPrice) ? 0 : totalPrice).toLocaleString()} JOD</span>
                 </div>
-              </div>
-
-              {/* Contact Info */}
-              <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
-                <Phone size={14} /> 
-                <span>Questions? Call {service.contactPhone}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Sections Grid - Mirrors layout to keep width constrained */}
+        {/* Bottom Sections Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-8">
           <div className="lg:col-span-8 flex flex-col gap-8">
             <ReviewsSection
               service={service}
-              reviews={MOCK_REVIEWS}
-              user={MOCK_USER}
+              reviews={reviews}
+              breakdown={breakdown}
+              totalReviews={totalReviews}
+              user={{ isLoggedIn, name: user?.full_name ?? '', avatar: user?.avatar_url ?? '' }}
+              canReview={canReview}
+              hasReviewed={hasReviewed}
+              onSubmit={(data) => submitReviewMutation.mutate(data)}
+              isSubmitting={submitReviewMutation.isPending}
+              submitError={reviewError}
             />
 
-            <LocationSection location={service.location} />
+            <LocationSection location={service.city ?? service.service_location ?? ''} />
           </div>
           {/* Empty right column to force left-alignment */}
           <div className="hidden lg:block lg:col-span-4"></div>
@@ -778,12 +971,15 @@ function ServiceDetail() {
 
         {/* Full Width Section */}
         <div className="mt-8 lg:mt-12">
-          <SimilarServicesSection category={service.category} />
+          <SimilarServicesSection
+            category={service.category?.name ?? ''}
+            services={similarServices}
+          />
         </div>
       </div>
 
       {/* Lightbox Modal */}
-      {isLightboxOpen && (
+      {isLightboxOpen && imageUrls.length > 0 && (
         <div 
           className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center cursor-default"
           onClick={() => { setIsLightboxOpen(false); setZoom(1); setPan({ x: 0, y: 0 }); }}
@@ -794,7 +990,7 @@ function ServiceDetail() {
             className="absolute top-6 left-6 text-white/90 text-sm font-medium tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
-            {activeIndex + 1} / {service.images.length}
+            {activeIndex + 1} / {imageUrls.length}
           </div>
 
           {/* Close Button */}
@@ -879,7 +1075,7 @@ function ServiceDetail() {
           
           {/* Lightbox Thumbnails */}
           <div className="absolute bottom-6 flex gap-2 max-w-full overflow-x-auto px-4 pb-2 z-10" onClick={(e) => e.stopPropagation()}>
-            {service.images.map((img, index) => (
+            {imageUrls.map((img, index) => (
               <button
                 key={index}
                 className={`w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${activeIndex === index ? 'border-[var(--color-gold)] scale-110 opacity-100' : 'border-transparent opacity-50 hover:opacity-100'}`}

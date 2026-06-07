@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   User, Building2, Eye, EyeOff, ArrowRight, ArrowLeft,
   IdCard, Upload, Globe,
@@ -14,8 +15,9 @@ import {
 
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import useCategoriesStore from '../../store/categoriesStore';
-import useAuthStore from '../../store/authStore';
+import api from '../../services/api';
+import * as authService from '../../services/auth.service';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 // ─────────────────────────────────────────────────────────────
 //  Jordanian cities
@@ -495,8 +497,12 @@ function AccordionSection({ id, title, isOpen, onToggle, children }) {
 function Signup() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { categories } = useCategoriesStore();
-  const { login } = useAuthStore();
+  
+  const { data: fetchResponse, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.get('/categories').then(res => res.data)
+  });
+  const categories = Array.isArray(fetchResponse?.data) ? fetchResponse.data : (Array.isArray(fetchResponse) ? fetchResponse : []);
 
   const seedRole = location.state?.role === 'vendor' ? 'vendor' : 'customer';
 
@@ -625,6 +631,24 @@ function Signup() {
     }
   };
 
+  // ── Register mutation ──────────────────────────────────
+  const registerMutation = useMutation({
+    mutationFn: (formData) => authService.register(formData),
+    onSuccess: (res) => {
+      // res = { success, data: { user, token } }
+      // NOTE: We do NOT auto-login. Redirect to /login so user signs in manually.
+      toastSuccess(
+        res.message ?? 'Account created! Please log in.'
+      );
+      navigate('/login', { replace: true });
+    },
+    onError: (err) => {
+      const msg =
+        err.response?.data?.error ?? 'Registration failed. Please try again.';
+      toastError(msg);
+    },
+  });
+
   const onSubmit = async (data) => {
     let hasLocalErrors = false;
     const sectionsToOpen = { ...openSections };
@@ -671,30 +695,35 @@ function Signup() {
       return;
     }
 
-    const payload = { ...data, socialMediaLinks };
+    // ── Build payload matching backend register endpoint ──
+    // Backend expects: email, password, username, full_name, phone, role
+    // Vendor extras:   vendor_type, company_name, company_description,
+    //                  city, iban, preferred_category_id, social_links
+    const payload = {
+      full_name:  data.full_name,
+      username:   data.username,
+      email:      data.email.trim().toLowerCase(),
+      phone:      data.phone,
+      password:   data.password,
+      role:       data.role,
+    };
 
-    try {
-      await new Promise((r) => setTimeout(r, 1200));
-      
-      const mockUser = {
-        id: Math.floor(Math.random() * 1000) + 10,
-        full_name: data.full_name,
-        username: data.username,
-        email: data.email,
-        role: data.role,
-        avatar_url: null
-      };
-      const mockToken = `mock-jwt-${mockUser.role}-${Date.now()}`;
-      login(mockUser, mockToken);
-      
-      if (data.role === 'vendor') {
-        navigate('/vendor/dashboard');
-      } else {
-        navigate('/home');
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
+    if (data.role === 'vendor') {
+      payload.vendor_type          = data.vendor_type;
+      payload.company_name         = data.company_name         || undefined;
+      payload.company_description  = data.company_description  || undefined;
+      // owner_signatory_name maps to the signatory field; backend stores via full_name on vendor_profiles
+      payload.owner_signatory_name = data.owner_signatory_name || undefined;
+      payload.city                 = data.city                 || undefined;
+      payload.iban                 = data.iban                 || undefined;
+      payload.preferred_category_id = data.category ? parseInt(data.category, 10) : undefined;
+      payload.social_links          = socialMediaLinks.length > 0
+        ? socialMediaLinks.filter(l => l.url.trim().length > 3)
+        : undefined;
+      payload.portfolio_website     = data.portfolio_website    || undefined;
     }
+
+    registerMutation.mutate(payload);
   };
 
   const ibanLabel = isCompany
@@ -959,12 +988,17 @@ function Signup() {
                           'focus:border-[var(--color-gold)] focus:ring-2 focus:ring-[var(--color-gold)]/20',
                           errors.category ? 'border-red-400 bg-red-50/30' : 'border-gray-200',
                         ].join(' ')}
+                        disabled={categoriesLoading}
                         {...register('category')}
                       >
                         <option value="">Select category…</option>
-                        {categories.filter(c => c.isActive).map((c) => (
-                          <option key={c.slug} value={c.slug}>{c.name}</option>
-                        ))}
+                        {categoriesLoading ? (
+                          <option value="" disabled>Loading categories...</option>
+                        ) : (
+                          categories.map((c) => (
+                            <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.name}</option>
+                          ))
+                        )}
                       </select>
                       {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
                     </div>
@@ -1121,11 +1155,14 @@ function Signup() {
                 variant="primary"
                 size="lg"
                 fullWidth
-                loading={isSubmitting}
-                rightIcon={!isSubmitting ? <ArrowRight size={17} /> : null}
+                loading={registerMutation.isPending}
+                disabled={registerMutation.isPending}
+                rightIcon={!registerMutation.isPending ? <ArrowRight size={17} /> : null}
                 className="rounded-full mt-2"
               >
-                {isVendor ? 'Submit Vendor Application' : 'Create Client Account'}
+                {registerMutation.isPending
+                  ? 'Creating account…'
+                  : isVendor ? 'Submit Vendor Application' : 'Create Client Account'}
               </Button>
 
               {isVendor && (

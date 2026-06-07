@@ -94,21 +94,25 @@ const seedData = async () => {
     console.log('Inserting services & images...');
     
     // Generate 12 realistic services
+    // Each entry has a catSlug so we can link to event types below.
     const servicesToInsert = [
-      { vendor: vendor1Id, cat: venuesCatId, subcat: hotelsSubId, title: 'Grand Crystal Ballroom', price: 2000, images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80', 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'] },
-      { vendor: vendor1Id, cat: venuesCatId, subcat: hotelsSubId, title: 'Amman Royal Palace', price: 3500, images: ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80'] },
-      { vendor: vendor1Id, cat: venuesCatId, subcat: hotelsSubId, title: 'Desert Rose Hall', price: 1500, images: ['https://images.unsplash.com/photo-1478146059778-26028b07395a?w=800&q=80', 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80'] },
-      { vendor: vendor1Id, cat: venuesCatId, subcat: null, title: 'Outdoor Garden Venue', price: 1800, images: ['https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80', 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80'] },
-      { vendor: vendor1Id, cat: venuesCatId, subcat: null, title: 'Sunset Terrace', price: 1200, images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80', 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'] },
-      { vendor: vendor1Id, cat: venuesCatId, subcat: hotelsSubId, title: 'City Center Banquet', price: 2500, images: ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: hotelsSubId, title: 'Grand Crystal Ballroom', price: 2000, images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80', 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: hotelsSubId, title: 'Amman Royal Palace', price: 3500, images: ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: hotelsSubId, title: 'Desert Rose Hall', price: 1500, images: ['https://images.unsplash.com/photo-1478146059778-26028b07395a?w=800&q=80', 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: null, title: 'Outdoor Garden Venue', price: 1800, images: ['https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80', 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: null, title: 'Sunset Terrace', price: 1200, images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80', 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'] },
+      { vendor: vendor1Id, cat: venuesCatId, catSlug: 'venue', subcat: hotelsSubId, title: 'City Center Banquet', price: 2500, images: ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80'] },
       
-      { vendor: vendor2Id, cat: photoCatId, subcat: weddingPhotoSubId, title: 'Premium Wedding Photography', price: 800, images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80', 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80'] },
-      { vendor: vendor2Id, cat: photoCatId, subcat: weddingPhotoSubId, title: 'Engagement Photo Session', price: 300, images: ['https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
-      { vendor: vendor2Id, cat: photoCatId, subcat: weddingPhotoSubId, title: 'Full Day Coverage', price: 1000, images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80', 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80'] },
-      { vendor: vendor2Id, cat: photoCatId, subcat: null, title: 'Birthday Photography', price: 250, images: ['https://images.unsplash.com/photo-1530103862676-de3c9de59f9e?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
-      { vendor: vendor2Id, cat: photoCatId, subcat: null, title: 'Corporate Event Photography', price: 600, images: ['https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
-      { vendor: vendor2Id, cat: photoCatId, subcat: weddingPhotoSubId, title: 'Pre-wedding Shoot', price: 400, images: ['https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] }
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: weddingPhotoSubId, title: 'Premium Wedding Photography', price: 800, images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80', 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80'] },
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: weddingPhotoSubId, title: 'Engagement Photo Session', price: 300, images: ['https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: weddingPhotoSubId, title: 'Full Day Coverage', price: 1000, images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80', 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80'] },
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: null, title: 'Birthday Photography', price: 250, images: ['https://images.unsplash.com/photo-1530103862676-de3c9de59f9e?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: null, title: 'Corporate Event Photography', price: 600, images: ['https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] },
+      { vendor: vendor2Id, cat: photoCatId, catSlug: 'photography-videography', subcat: weddingPhotoSubId, title: 'Pre-wedding Shoot', price: 400, images: ['https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80'] }
     ];
+
+    // Collect seeded services with their category slug for event type linking below
+    const seededServices = [];
 
     for (let s of servicesToInsert) {
       const sRes = await db.query(`
@@ -118,6 +122,7 @@ const seedData = async () => {
       `, [s.vendor, s.cat, s.subcat, s.title, s.price]);
       
       const serviceId = sRes.rows[0].service_id;
+      seededServices.push({ service_id: serviceId, category_slug: s.catSlug });
       
       await db.query(`
         INSERT INTO service_images (service_id, image_url, is_primary, sort_order)
@@ -125,6 +130,43 @@ const seedData = async () => {
           ($1, $2, true, 0),
           ($1, $3, false, 1)
       `, [serviceId, s.images[0], s.images[1]]);
+    }
+
+    // 8. Seed service_event_types junction table
+    console.log('Linking services to event types...');
+
+    // Build event_type_id lookup map keyed by slug
+    const etRes = await db.query('SELECT event_type_id, slug FROM event_types');
+    const etMap = {};
+    etRes.rows.forEach(et => { etMap[et.slug] = et.event_type_id; });
+
+    // Category slug → event type slugs mapping.
+    // Note: frontend FilterSidebar uses 'milestone-birthdays' but our DB slug is 'birthday'.
+    // Both are included so the mapping works regardless of which slug is used.
+    const categoryEventTypeMap = {
+      'venue':                   ['wedding', 'graduation', 'birthday', 'corporate', 'general'],
+      'event-planning':          ['wedding', 'graduation', 'birthday', 'corporate', 'general'],
+      'catering':                ['wedding', 'graduation', 'birthday', 'corporate', 'general'],
+      'cakes-desserts':          ['wedding', 'graduation', 'birthday'],
+      'photography-videography': ['wedding', 'graduation', 'birthday', 'corporate', 'general'],
+      'decoration':              ['wedding', 'graduation', 'birthday', 'corporate', 'general'],
+      'music-entertainment':     ['wedding', 'corporate', 'birthday', 'general'],
+      'makeup-beauty':           ['wedding', 'graduation', 'birthday'],
+      'transportation':          ['wedding', 'corporate', 'general'],
+      'invitations-prints':      ['wedding', 'graduation', 'birthday', 'corporate'],
+    };
+
+    for (const service of seededServices) {
+      const eventTypeSlugs = categoryEventTypeMap[service.category_slug] ?? ['general'];
+      for (const etSlug of eventTypeSlugs) {
+        const etId = etMap[etSlug];
+        if (!etId) continue;
+        await db.query(
+          `INSERT INTO service_event_types (service_id, event_type_id)
+           VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [service.service_id, etId]
+        );
+      }
     }
 
     console.log('✅ Seeding completed successfully!');

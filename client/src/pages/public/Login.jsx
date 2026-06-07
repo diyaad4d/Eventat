@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, LogIn } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { showToast } from '../../components/ui/Toast';
 import useAuthStore from '../../store/authStore';
+import * as authService from '../../services/auth.service';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 // ─────────────────────────────────────────────────────────────
 //  Role → redirect map (mirrors ProtectedRoute ROLE_HOME)
@@ -18,22 +20,6 @@ const ROLE_REDIRECT = {
   vendor: '/vendor/dashboard',
   admin: '/admin/dashboard',
 };
-
-// ─────────────────────────────────────────────────────────────
-//  Mock user factory
-//  - vendor@test.com  → vendor role
-//  - admin@test.com   → admin role
-//  - anything else    → customer role
-// ─────────────────────────────────────────────────────────────
-function buildMockUser(email) {
-  if (email === 'vendor@test.com') {
-    return { id: 2, full_name: 'Vendor Demo', username: 'vendor_demo', email, role: 'vendor', avatar_url: null };
-  }
-  if (email === 'admin@test.com') {
-    return { id: 3, full_name: 'Admin User', username: 'admin', email, role: 'admin', avatar_url: null };
-  }
-  return { id: 1, full_name: 'Test Client', username: 'test_client', email, role: 'customer', avatar_url: null };
-}
 
 // ─────────────────────────────────────────────────────────────
 //  Zod validation schema
@@ -49,13 +35,21 @@ const loginSchema = z.object({
 // ─────────────────────────────────────────────────────────────
 function Login() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, isAuthenticated, user } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+
+  // ── Already-logged-in guard ───────────────────────────────
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const redirect = ROLE_REDIRECT[user.role] ?? '/home';
+      navigate(redirect, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '', remember_me: false },
@@ -63,20 +57,30 @@ function Login() {
     reValidateMode: 'onChange',
   });
 
-  // ── Submit handler ─────────────────────────────────────────
-  const onSubmit = async (data) => {
-    // Simulate 1.5 s network delay
-    await new Promise((r) => setTimeout(r, 1500));
+  // ── Login mutation ────────────────────────────────────────
+  const loginMutation = useMutation({
+    mutationFn: (credentials) => authService.login(credentials),
+    onSuccess: (res) => {
+      // res = { success, data: { user, token } }
+      const { user: loggedInUser, token } = res.data;
+      login(loggedInUser, token); // authStore action — handles localStorage
+      toastSuccess(`Welcome back, ${loggedInUser.full_name?.split(' ')[0]}! 👋`);
+      const redirect = ROLE_REDIRECT[loggedInUser.role] ?? '/home';
+      navigate(redirect, { replace: true });
+    },
+    onError: (err) => {
+      const msg =
+        err.response?.data?.error ?? 'Login failed. Check your email and password.';
+      toastError(msg);
+    },
+  });
 
-    // Build mock user & token, then commit to Zustand authStore
-    const mockUser = buildMockUser(data.email);
-    const mockToken = `mock-jwt-${mockUser.role}-${Date.now()}`;
-    login(mockUser, mockToken);
-
-    showToast.success(`Welcome back, ${mockUser.full_name.split(' ')[0]}! 👋`);
-
-    // Role-based redirect
-    navigate(ROLE_REDIRECT[mockUser.role] ?? '/home');
+  // ── Submit handler ────────────────────────────────────────
+  const onSubmit = (data) => {
+    loginMutation.mutate({
+      email: data.email.trim().toLowerCase(),
+      password: data.password,
+    });
   };
 
   return (
@@ -202,11 +206,12 @@ function Login() {
                 variant="primary"
                 size="lg"
                 fullWidth
-                loading={isSubmitting}
-                rightIcon={!isSubmitting ? <ArrowRight size={17} /> : null}
+                loading={loginMutation.isPending}
+                disabled={loginMutation.isPending}
+                rightIcon={!loginMutation.isPending ? <ArrowRight size={17} /> : null}
                 className="rounded-full mt-2"
               >
-                Log In
+                {loginMutation.isPending ? 'Logging in…' : 'Log In'}
               </Button>
             </form>
 
@@ -230,19 +235,6 @@ function Login() {
 
           </div>
         </div>
-
-        {/* ── Test credentials hint (dev helper) ─────────────
-        <div className="mt-5 rounded-xl border border-dashed border-gray-200 bg-white/60 px-5 py-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            🧪 Test accounts
-          </p>
-          <div className="space-y-1 text-xs text-gray-500 font-mono">
-            <p><span className="text-[var(--color-gold)]">any@email.com</span> → Customer dashboard</p>
-            <p><span className="text-[var(--color-gold)]">vendor@test.com</span> → Vendor dashboard</p>
-            <p><span className="text-[var(--color-gold)]">admin@test.com</span> → Admin dashboard</p>
-            <p className="text-gray-400">Password: any 8+ characters</p>
-          </div>
-        </div> */}
 
       </div>
     </div>
