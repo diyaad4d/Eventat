@@ -502,7 +502,10 @@ function Signup() {
     queryKey: ['categories'],
     queryFn: () => api.get('/categories').then(res => res.data)
   });
-  const categories = Array.isArray(fetchResponse?.data) ? fetchResponse.data : (Array.isArray(fetchResponse) ? fetchResponse : []);
+  
+  // The backend returns { success: true, data: { categories: [...] } }
+  const rawCategories = fetchResponse?.data?.categories || fetchResponse?.data || fetchResponse;
+  const categories = Array.isArray(rawCategories) ? rawCategories : [];
 
   const seedRole = location.state?.role === 'vendor' ? 'vendor' : 'customer';
 

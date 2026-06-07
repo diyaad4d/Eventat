@@ -8,7 +8,19 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import vendorService from '../../services/vendor.service';
+import { getNotifications } from '../../services/notifications.service';
 import { toastSuccess, toastError } from '../../utils/toast';
+
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const diff    = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours   = Math.floor(diff / 3600000);
+  const days    = Math.floor(diff / 86400000);
+  if (minutes < 60) return `${minutes} minutes ago`;
+  if (hours   < 24) return `${hours} hours ago`;
+  return `${days} days ago`;
+};
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function KpiSkeleton() {
@@ -159,14 +171,20 @@ function VendorDashboard() {
     }
   };
 
-  // TODO (Step 2.5.6): Replace MOCK_ACTIVITY with real notifications
-  // from GET /api/notifications once the notifications service is wired.
-  const MOCK_ACTIVITY = [
-    { id: 1, text: 'You accepted a booking.', time: '2 hours ago', type: 'accepted' },
-    { id: 2, text: 'New review on your service.', time: '5 hours ago', type: 'review' },
-    { id: 3, text: 'Payment cleared to your account.', time: '1 day ago', type: 'payment' },
-    { id: 4, text: 'You updated a service listing.', time: '2 days ago', type: 'updated' },
-  ];
+  const { data: activityData } = useQuery({
+    queryKey: ['vendor-notifications', 'dashboard-preview'],
+    queryFn:  () => getNotifications({ limit: 4 }),
+    staleTime: 1000 * 60,
+  });
+
+  const recentActivity = (activityData?.notifications ?? [])
+    .slice(0, 4)
+    .map(n => ({
+      id:   n.notification_id ?? n.id,
+      text: n.message_body ?? n.message ?? n.title,
+      time: formatTimeAgo(n.created_at),
+      type: n.notification_type ?? n.type ?? 'system',
+    }));
 
   return (
     <PageTransition className="w-full max-w-7xl mx-auto pb-12">
@@ -305,28 +323,35 @@ function VendorDashboard() {
           <h2 className="text-lg font-bold text-[var(--color-dark)]">Recent Activity</h2>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex flex-col gap-6">
-              {MOCK_ACTIVITY.map((act) => {
-                let ActIcon = Bell;
-                let iconBg = 'bg-gray-50 text-gray-500';
-                if (act.type === 'accepted') { ActIcon = CheckCircle; iconBg = 'bg-green-50 text-green-600'; }
-                else if (act.type === 'review') { ActIcon = Star; iconBg = 'bg-amber-50 text-amber-500'; }
-                else if (act.type === 'payment') { ActIcon = DollarSign; iconBg = 'bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)]'; }
-                else if (act.type === 'updated') { ActIcon = Edit2; iconBg = 'bg-blue-50 text-blue-600'; }
-                return (
-                  <div key={act.id} className="flex gap-4 relative">
-                    <div className={`w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0 z-10 ${iconBg}`}>
-                      <ActIcon size={14} />
+              {recentActivity.length === 0 ? (
+                <div className="py-8 text-center text-gray-400 text-sm">
+                  No recent activity yet.
+                </div>
+              ) : (
+                recentActivity.map((act, index) => {
+                  let ActIcon = Bell;
+                  let iconBg = 'bg-gray-50 text-gray-500';
+                  if (act.type === 'booking_confirmed' || act.type === 'accepted') { ActIcon = CheckCircle; iconBg = 'bg-green-50 text-green-600'; }
+                  else if (act.type === 'review_new' || act.type === 'review') { ActIcon = Star; iconBg = 'bg-amber-50 text-amber-500'; }
+                  else if (act.type === 'payment') { ActIcon = DollarSign; iconBg = 'bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)]'; }
+                  else if (act.type === 'booking_new') { ActIcon = Bell; iconBg = 'bg-amber-50 text-amber-600'; }
+                  else if (act.type === 'updated') { ActIcon = Edit2; iconBg = 'bg-blue-50 text-blue-600'; }
+                  return (
+                    <div key={act.id} className="flex gap-4 relative">
+                      <div className={`w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0 z-10 ${iconBg}`}>
+                        <ActIcon size={14} />
+                      </div>
+                      {index < recentActivity.length - 1 && (
+                        <div className="absolute top-8 left-4 bottom-[-24px] w-px bg-gray-100" />
+                      )}
+                      <div className="pt-1.5">
+                        <p className="text-sm text-gray-700 font-medium leading-snug">{act.text}</p>
+                        <p className="text-xs text-gray-400 mt-1">{act.time}</p>
+                      </div>
                     </div>
-                    {act.id !== MOCK_ACTIVITY.length && (
-                      <div className="absolute top-8 left-4 bottom-[-24px] w-px bg-gray-100" />
-                    )}
-                    <div className="pt-1.5">
-                      <p className="text-sm text-gray-700 font-medium leading-snug">{act.text}</p>
-                      <p className="text-xs text-gray-400 mt-1">{act.time}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

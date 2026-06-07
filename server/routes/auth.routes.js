@@ -66,7 +66,9 @@ router.post('/register',
         .notEmpty().withMessage('City is required for vendors'),
 
       body('preferred_category_id').if(body('role').equals('vendor'))
-        .notEmpty().withMessage('Service Category is required'),
+        .optional()
+        .isInt({ min: 1 }).withMessage('Category must be a valid ID.')
+        .toInt(), // auto-convert string to integer
 
       body('company_description').if(body('role').equals('vendor'))
         .notEmpty().withMessage('About Your Work is required'),

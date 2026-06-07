@@ -21,9 +21,35 @@ exports.register = async (req, res, next) => {
       city,
       address,
       iban,
-      preferred_category_id, 
       social_links
     } = req.body;
+
+    const rawCategory = req.body.category_id ?? req.body.preferred_category_id ?? req.body.category;
+    const preferred_category_id = rawCategory ? parseInt(rawCategory, 10) : null;
+
+    if (rawCategory && isNaN(preferred_category_id)) {
+      client.release();
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid category selection.',
+        fields: { category: 'Please select a valid category.' },
+      });
+    }
+
+    if (preferred_category_id) {
+      const catCheck = await client.query(
+        `SELECT category_id FROM categories WHERE category_id = $1 AND is_active = true`,
+        [preferred_category_id]
+      );
+      if (catCheck.rows.length === 0) {
+        client.release();
+        return res.status(400).json({
+          success: false,
+          error: 'Selected category does not exist.',
+          fields: { category: 'Please select a valid category.' },
+        });
+      }
+    }
 
     await client.query('BEGIN');
 

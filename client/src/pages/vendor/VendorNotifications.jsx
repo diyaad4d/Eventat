@@ -1,101 +1,23 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getNotifications, markAsRead, markAllAsRead } from '../../services/notifications.service';
 import {
   Bell, Star, DollarSign, CheckCircle2,
   XCircle, CalendarPlus, X, CheckCheck,
 } from 'lucide-react';
 import EmptyState from '../../components/shared/EmptyState';
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 'n1',
-    type: 'booking_new',
-    title: 'New Booking Request',
-    message: 'Ahmad M. requested Grand Royal Ballroom for Aug 10, 2026.',
-    time: '2 minutes ago',
-    isRead: false,
-    actionLabel: 'View Request',
-    actionLink: '/vendor/bookings',
-    avatar: 'https://i.pravatar.cc/150?img=11',
-  },
-  {
-    id: 'n2',
-    type: 'review_new',
-    title: 'New 5-Star Review',
-    message: 'Sarah Al-Ahmad left a 5-star review on Grand Royal Ballroom.',
-    time: '1 hour ago',
-    isRead: false,
-    actionLabel: 'See Review',
-    actionLink: '/vendors/v1',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-  },
-  {
-    id: 'n3',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'Payment of 1,500 JOD cleared to your account for booking BR-1001.',
-    time: '3 hours ago',
-    isRead: false,
-    actionLabel: 'View Booking',
-    actionLink: '/vendor/bookings',
-    avatar: null,
-  },
-  {
-    id: 'n4',
-    type: 'booking_confirmed',
-    title: 'Booking Confirmed',
-    message: 'You confirmed Lina K.\'s booking for Elite Catering on Sep 5, 2026.',
-    time: '5 hours ago',
-    isRead: true,
-    actionLabel: 'View Booking',
-    actionLink: '/vendor/bookings',
-    avatar: 'https://i.pravatar.cc/150?img=32',
-  },
-  {
-    id: 'n5',
-    type: 'booking_cancelled',
-    title: 'Booking Cancelled',
-    message: 'Rania H. cancelled her booking for Elite Catering (Jun 25).',
-    time: '1 day ago',
-    isRead: true,
-    actionLabel: 'View Details',
-    actionLink: '/vendor/bookings',
-    avatar: 'https://i.pravatar.cc/150?img=25',
-  },
-  {
-    id: 'n6',
-    type: 'system',
-    title: 'Profile Incomplete',
-    message: 'Add your website link to complete your profile and attract more clients.',
-    time: '2 days ago',
-    isRead: true,
-    actionLabel: 'Complete Profile',
-    actionLink: '/vendor/profile',
-    avatar: null,
-  },
-  {
-    id: 'n7',
-    type: 'review_new',
-    title: 'New Review',
-    message: 'Omar Khalil left a 5-star review on The Pearl Ballroom.',
-    time: '3 days ago',
-    isRead: true,
-    actionLabel: 'See Review',
-    actionLink: '/vendors/v1',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-  },
-  {
-    id: 'n8',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'Payment of 850 JOD cleared for booking BR-0950.',
-    time: '4 days ago',
-    isRead: true,
-    actionLabel: 'View Booking',
-    actionLink: '/vendor/bookings',
-    avatar: null,
-  },
-];
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours   = Math.floor(diff / 3600000);
+  const days    = Math.floor(diff / 86400000);
+  if (minutes < 60)  return `${minutes} minutes ago`;
+  if (hours   < 24)  return `${hours} hours ago`;
+  return `${days} days ago`;
+};
 
 const TYPE_CONFIG = {
   booking_new: {
@@ -137,8 +59,30 @@ const TYPE_CONFIG = {
 };
 
 function VendorNotifications() {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
+
+  const {
+    data: notifData,
+    isLoading: notifLoading,
+  } = useQuery({
+    queryKey: ['vendor-notifications'],
+    queryFn: () => getNotifications({ limit: 50 }),
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
+  });
+
+  const notifications = (notifData?.notifications ?? []).map((n) => ({
+    id: n.notification_id ?? n.id,
+    type: n.notification_type ?? n.type ?? 'system',
+    title: n.title,
+    message: n.message_body ?? n.message,
+    time: formatTimeAgo(n.created_at),
+    isRead: n.is_read ?? false,
+    actionLabel: n.action_url ? 'View' : null,
+    actionLink: n.action_url ?? '#',
+    avatar: n.avatar_url ?? null,
+  }));
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -151,16 +95,41 @@ function VendorNotifications() {
     return true;
   });
 
-  const markAllRead = () =>
-    setNotifications(prev => prev.map(n => ({...n, isRead: true})));
+  const markAllMutation = useMutation({
+    mutationFn: () => markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['vendor-notifications-count'] });
+    },
+  });
 
-  const markRead = (id) =>
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? {...n, isRead: true} : n)
-    );
+  const markAllRead = () => {
+    markAllMutation.mutate();
+  };
 
-  const deleteNotification = (id) =>
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const markReadMutation = useMutation({
+    mutationFn: (id) => markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['vendor-notifications-count'] });
+    },
+  });
+
+  const markRead = (id) => {
+    markReadMutation.mutate(id);
+  };
+
+  const deleteNotification = (id) => {
+    queryClient.setQueryData(['vendor-notifications'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        notifications: (old.notifications ?? []).filter(
+          (n) => (n.notification_id ?? n.id) !== id
+        ),
+      };
+    });
+  };
 
   const FILTERS = [
     { id: 'all',      label: 'All',      count: notifications.length },
@@ -172,6 +141,24 @@ function VendorNotifications() {
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-16">
+      {notifLoading ? (
+        <div className="flex flex-col gap-2 mt-6">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse flex items-start gap-4 p-4 rounded-2xl border border-gray-100 bg-white"
+            >
+              <div className="w-11 h-11 rounded-full bg-gray-200 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-200 rounded w-1/3" />
+                <div className="h-3 bg-gray-100 rounded w-2/3" />
+                <div className="h-3 bg-gray-100 rounded w-1/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
 
       {/* ══ HEADER ══ */}
       <div className="flex flex-col sm:flex-row sm:items-center 
@@ -338,6 +325,8 @@ function VendorNotifications() {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   );

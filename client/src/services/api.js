@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import useAuthStore from '../store/authStore';
 
 //  أي طلب يخرج يذهب الى هذا الملف تلقائياً (العنوان الرئيسي، التوكن، ومركز التفتيش)
 
@@ -20,7 +21,7 @@ const api = axios.create({
 // ─────────────────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('eventat_token');
+    const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,9 +41,8 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
-      // Clear stale session data
-      localStorage.removeItem('eventat_token');
-      localStorage.removeItem('eventat_user');
+      // Clear stale session data using Zustand store
+      useAuthStore.getState().logout();
       toast.error('Your session has expired. Please log in again.', {
         id: 'session-expired', // deduplicate toasts
       });
