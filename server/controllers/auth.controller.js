@@ -76,7 +76,7 @@ exports.register = async (req, res, next) => {
 
       const socialLinksJson = social_links ? JSON.stringify(social_links) : '[]';
       
-     await client.query(`
+      await client.query(`
         INSERT INTO vendor_profiles (
           vendor_id, 
           vendor_type, 
@@ -100,6 +100,27 @@ exports.register = async (req, res, next) => {
         preferred_category_id, 
         socialLinksJson        
       ]);
+
+      // Handle document uploads
+      if (req.files) {
+        const filesToInsert = [];
+        if (req.files['commercialRegister']) {
+          filesToInsert.push({ type: 'commercial_register', url: `/uploads/documents/${req.files['commercialRegister'][0].filename}` });
+        }
+        if (req.files['nationalIdFront']) {
+          filesToInsert.push({ type: 'national_id_front', url: `/uploads/documents/${req.files['nationalIdFront'][0].filename}` });
+        }
+        if (req.files['nationalIdBack']) {
+          filesToInsert.push({ type: 'national_id_back', url: `/uploads/documents/${req.files['nationalIdBack'][0].filename}` });
+        }
+
+        for (const file of filesToInsert) {
+          await client.query(`
+            INSERT INTO vendor_documents (vendor_id, document_type, file_url)
+            VALUES ($1, $2, $3)
+          `, [newUser.user_id, file.type, file.url]);
+        }
+      }
     }
 
     await client.query('COMMIT');

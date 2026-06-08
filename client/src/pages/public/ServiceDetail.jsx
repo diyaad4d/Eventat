@@ -533,6 +533,11 @@ function ServiceDetail() {
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = !!user;
 
+  // Always scroll to top when opening a service detail page
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [serviceId]);
+
   // ── State: image gallery ────────────────────────────────────
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -798,14 +803,26 @@ function ServiceDetail() {
             {/* Service Info Panel */}
             <div>
               {/* Header Row (Badges) */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  {service.category?.name ?? ''}
-                </span>
-                {service.subcategory && (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                    {service.subcategory.name}
+                    {service.category?.name ?? ''}
                   </span>
+                  {service.subcategory && (
+                    <span className="bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                      {service.subcategory.name}
+                    </span>
+                  )}
+                </div>
+                {/* Event Types */}
+                {service.event_types && service.event_types.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {service.event_types.map((et) => (
+                      <span key={et.event_type_id} className="border border-gray-200 text-gray-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        {et.name}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 

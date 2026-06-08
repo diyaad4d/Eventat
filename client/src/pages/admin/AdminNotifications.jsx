@@ -5,105 +5,56 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// ─────────────────────────────────────────────────────────────
-//  MOCK DATA
-// ─────────────────────────────────────────────────────────────
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getNotifications, markAsRead, markAllAsRead } from '../../services/notifications.service';
+import { formatDistanceToNow } from 'date-fns';
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'alert',
-    title: 'New Vendor Registration',
-    message: 'Royal Catering has submitted a vendor application and is pending approval.',
-    time: '10 mins ago',
-    isUnread: true,
-    icon: Building2,
-    link: '/admin/vendors'
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: 'High Dispute Rate',
-    message: 'Vendor "Elite Audio Visual" has received 3 disputes in the last 7 days.',
-    time: '2 hours ago',
-    isUnread: true,
-    icon: AlertTriangle,
-    link: '/admin/vendors'
-  },
-  {
-    id: 3,
-    type: 'success',
-    title: 'Payout Processed',
-    message: 'Monthly payouts to 45 vendors have been successfully processed.',
-    time: 'Yesterday',
-    isUnread: false,
-    icon: CreditCard,
-    link: '/admin/analytics'
-  },
-  {
-    id: 4,
-    type: 'info',
-    title: 'New Review Milestone',
-    message: 'The platform just reached 10,000 verified user reviews!',
-    time: 'Yesterday',
-    isUnread: false,
-    icon: Star,
-    link: null
-  },
-  {
-    id: 5,
-    type: 'alert',
-    title: 'Profile Update Review',
-    message: 'Vendor "Diamond Events" has requested profile updates. Review pending.',
-    time: '2 days ago',
-    isUnread: false,
-    icon: ShieldAlert,
-    link: '/admin/vendors'
-  },
-  {
-    id: 6,
-    type: 'info',
-    title: 'System Update Completed',
-    message: 'v2.4.1 has been deployed successfully. All services operating normally.',
-    time: '3 days ago',
-    isUnread: false,
-    icon: ShieldCheck,
-    link: null
-  },
-  {
-    id: 7,
-    type: 'alert',
-    title: 'Suspicious Activity Detected',
-    message: 'Multiple failed login attempts detected from IP 192.168.1.100 on Admin account.',
-    time: '4 days ago',
-    isUnread: false,
-    icon: ShieldAlert,
-    link: null
+const getIconForType = (type) => {
+  switch (type) {
+    case 'vendor_approved':
+    case 'account_reinstated':
+    case 'profile_changes_approved':
+      return ShieldCheck;
+    case 'vendor_rejected':
+    case 'account_banned':
+      return ShieldAlert;
+    case 'booking_created':
+    case 'booking_status_updated':
+      return AlertTriangle;
+    default:
+      return Info;
   }
-];
+};
 
 export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [filter, setFilter] = useState('all');
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState('all'); // 'all' or 'unread'
 
-  const unreadCount = notifications.filter(n => n.isUnread).length;
-
-  const filteredNotifications = notifications.filter(n => {
-    if (filter === 'unread') return n.isUnread;
-    return true;
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-notifications', filter],
+    queryFn: () => getNotifications({ 
+      unread_only: filter === 'unread' ? true : undefined,
+      limit: 50 // fetch latest 50
+    })
   });
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
-  };
+  const notifications = data?.data?.notifications || [];
+  const unreadCount = data?.data?.unread_count || 0;
 
-  const markAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isUnread: false } : n));
-  };
+  const markAllAsReadMutation = useMutation({
+    mutationFn: markAllAsRead,
+    onSuccess: () => {
+      import('../../utils/toast').then(m => m.toastSuccess('All notifications marked as read'));
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+    }
+  });
 
-  const deleteNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
+  const markAsReadMutation = useMutation({
+    mutationFn: (id) => markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+    }
+  });
 
   const getIconColor = (type) => {
     switch (type) {
@@ -139,8 +90,8 @@ export default function AdminNotifications() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={markAllAsRead}
-              disabled={unreadCount === 0}
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={unreadCount === 0 || markAllAsReadMutation.isPending}
               className="flex items-center gap-2 px-4 py-2 bg-[#1A1D27] border border-[#2A2D3A] text-white rounded-xl hover:bg-[#2A2D3A] transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check size={16} /> Mark all read
@@ -173,7 +124,9 @@ export default function AdminNotifications() {
 
         {/* ══ NOTIFICATIONS LIST ══ */}
         <div className="bg-[#1A1D27] border border-[#2A2D3A] rounded-2xl overflow-hidden flex flex-col">
-          {filteredNotifications.length === 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-[#8B8FA8]">Loading notifications...</div>
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <div className="w-16 h-16 bg-[#2A2D3A]/50 rounded-full flex items-center justify-center mb-4">
                 <Bell size={24} className="text-[#8B8FA8]" />
@@ -183,45 +136,47 @@ export default function AdminNotifications() {
             </div>
           ) : (
             <div className="divide-y divide-[#2A2D3A]">
-              {filteredNotifications.map((notif) => {
-                const Icon = notif.icon;
+              {notifications.map((notif) => {
+                const Icon = getIconForType(notif.notification_type);
+                const isUnread = !notif.is_read;
                 return (
                   <div 
-                    key={notif.id} 
+                    key={notif.notification_id} 
                     className={`p-5 flex gap-4 transition-colors ${
-                      notif.isUnread ? 'bg-[#0F1117]/50 hover:bg-[#0F1117]/80' : 'hover:bg-[#2A2D3A]/20'
+                      isUnread ? 'bg-[#0F1117]/50 hover:bg-[#0F1117]/80' : 'hover:bg-[#2A2D3A]/20'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-1 ${getIconColor(notif.type)}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-1 ${getIconColor(notif.notification_type)}`}>
                       <Icon size={18} />
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className={`text-sm font-bold truncate pr-4 ${notif.isUnread ? 'text-white' : 'text-[#8B8FA8]'}`}>
+                        <h3 className={`text-sm font-bold truncate pr-4 ${isUnread ? 'text-white' : 'text-[#8B8FA8]'}`}>
                           {notif.title}
                         </h3>
                         <span className="text-xs font-semibold text-[#8B8FA8] shrink-0 whitespace-nowrap">
-                          {notif.time}
+                          {notif.created_at ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) : 'N/A'}
                         </span>
                       </div>
                       
                       <p className="text-sm text-[#8B8FA8] leading-relaxed mb-3">
-                        {notif.message}
+                        {notif.message_body}
                       </p>
                       
                       <div className="flex items-center gap-4">
-                        {notif.link && (
+                        {notif.action_url && (
                           <Link 
-                            to={notif.link}
+                            to={notif.action_url}
                             className="text-xs font-bold text-[var(--color-gold)] hover:text-white transition-colors"
                           >
                             View Details →
                           </Link>
                         )}
-                        {notif.isUnread && (
+                        {isUnread && (
                           <button 
-                            onClick={() => markAsRead(notif.id)}
+                            onClick={() => markAsReadMutation.mutate(notif.notification_id)}
+                            disabled={markAsReadMutation.isPending}
                             className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
                           >
                             Mark as read
@@ -229,14 +184,6 @@ export default function AdminNotifications() {
                         )}
                       </div>
                     </div>
-
-                    <button 
-                      onClick={() => deleteNotification(notif.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-[#8B8FA8] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 );
               })}

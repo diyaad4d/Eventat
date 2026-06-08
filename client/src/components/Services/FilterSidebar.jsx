@@ -16,7 +16,7 @@ import useCategoriesStore from '../../store/categoriesStore';
 const EVENT_TYPES = [
   { value: 'wedding',             label: 'Wedding',             emoji: '💍' },
   { value: 'graduation',          label: 'Graduation',          emoji: '🎓' },
-  { value: 'milestone-birthdays', label: 'Milestone Birthdays', emoji: '🎂' },
+  { value: 'birthday', label: 'Milestone Birthdays', emoji: '🎂' },
   { value: 'corporate',           label: 'Corporate',           emoji: '💼' },
   { value: 'general',             label: 'General',             emoji: '🎉' },
 ];

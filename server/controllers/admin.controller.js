@@ -217,6 +217,10 @@ const getPlatformStats = async (req, res, next) => {
 // ===========================================================================
 const getVendors = async (req, res, next) => {
   try {
+    console.log('\n====== ADMIN getVendors ======');
+    console.log('req.user:', req.user);
+    console.log('req.query:', req.query);
+
     const statusParam = req.query.status || null;  // 'pending' | 'approved' | 'rejected'
     const search      = req.query.search   || null;
     const category    = req.query.category || null;
@@ -293,6 +297,10 @@ const getVendors = async (req, res, next) => {
     params.push(limit, offset);
     const result = await db.query(sql, params);
 
+    console.log('getVendors SQL result row count:', result.rowCount);
+    console.log('getVendors first row sample:', result.rows[0] ? JSON.stringify(result.rows[0]).substring(0, 200) : 'NO ROWS');
+    console.log('==============================\n');
+
     const total      = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
     const totalPages = Math.ceil(total / limit);
     const vendors    = result.rows.map(({ total_count, iban, ...row }) => ({
@@ -331,6 +339,10 @@ const getVendors = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error('====== getVendors ERROR ======');
+    console.error(err.message);
+    console.error(err.stack);
+    console.error('==============================');
     next(err);
   }
 };
@@ -649,6 +661,10 @@ const approveVendorChanges = async (req, res, next) => {
 // ===========================================================================
 const getUsers = async (req, res, next) => {
   try {
+    console.log('\n====== ADMIN getUsers ======');
+    console.log('req.user:', req.user);
+    console.log('req.query:', req.query);
+
     const roleFilter    = req.query.role   || null;   // 'customer' | 'vendor' | 'admin'
     const statusFilter  = req.query.status || null;   // 'active' | 'banned' (maps to is_active)
     const search        = req.query.search || null;

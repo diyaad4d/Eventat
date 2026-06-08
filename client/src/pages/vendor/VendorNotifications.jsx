@@ -72,7 +72,7 @@ function VendorNotifications() {
     refetchInterval: 1000 * 60,
   });
 
-  const notifications = (notifData?.notifications ?? []).map((n) => ({
+  const notifications = (notifData?.data?.notifications ?? []).map((n) => ({
     id: n.notification_id ?? n.id,
     type: n.notification_type ?? n.type ?? 'system',
     title: n.title,
@@ -121,12 +121,15 @@ function VendorNotifications() {
 
   const deleteNotification = (id) => {
     queryClient.setQueryData(['vendor-notifications'], (old) => {
-      if (!old) return old;
+      if (!old || !old.data) return old;
       return {
         ...old,
-        notifications: (old.notifications ?? []).filter(
-          (n) => (n.notification_id ?? n.id) !== id
-        ),
+        data: {
+          ...old.data,
+          notifications: (old.data.notifications ?? []).filter(
+            (n) => (n.notification_id ?? n.id) !== id
+          ),
+        }
       };
     });
   };
@@ -228,7 +231,7 @@ function VendorNotifications() {
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((notif) => {
-            const cfg = TYPE_CONFIG[notif.type];
+            const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG['system'];
             return (
               <div
                 key={notif.id}

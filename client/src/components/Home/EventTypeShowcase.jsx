@@ -29,7 +29,7 @@ const EVENT_TYPES = [
     tintClass: 'from-blue-950/80 via-blue-900/40',
   },
   {
-    slug:      'milestone-birthdays',
+    slug:      'birthday',
     label:     'Birthdays',
     index:     '03',
     tagline:   'Celebrate life\'s biggest milestones',

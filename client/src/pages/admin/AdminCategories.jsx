@@ -3,24 +3,18 @@ import {
   Plus, ChevronRight, Edit2, Trash2, ShieldAlert, X, UploadCloud
 } from 'lucide-react';
 import PageTransition from '../../components/shared/PageTransition';
-import useCategoriesStore from '../../store/categoriesStore';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  getAdminCategories, createCategory, updateCategory, deleteCategory,
+  createSubcategory, updateSubcategory, deleteSubcategory 
+} from '../../services/admin.service';
 
 function generateSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 export default function AdminCategories() {
-  const {
-    categories,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    toggleCategoryStatus,
-    addSubcategory,
-    updateSubcategory,
-    deleteSubcategory,
-    toggleSubcategoryStatus,
-  } = useCategoriesStore();
+  const queryClient = useQueryClient();
   const [expandedIds, setExpandedIds] = useState([]);
   
   // Modals state
@@ -37,11 +31,18 @@ export default function AdminCategories() {
   const [confirmDeleteCat, setConfirmDeleteCat] = useState(null);
   const [confirmDeleteSub, setConfirmDeleteSub] = useState(null); // { catId, subId }
 
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-categories'],
+    queryFn: getAdminCategories,
+  });
+
+  const categories = data?.data?.categories || [];
+
   // ─── Stats ───
   const activeCats = categories.filter(c => c.isActive).length;
   const inactiveCats = categories.length - activeCats;
   const totalSubcats = categories.reduce((sum, cat) => sum + (cat.subcategories?.length || 0), 0);
-  const totalServices = categories.reduce((sum, cat) => sum + cat.servicesCount, 0);
+  const totalServices = categories.reduce((sum, cat) => sum + (cat.servicesCount || 0), 0);
 
   // ─── Toggle Expand ───
   const toggleExpand = (id) => {
@@ -50,66 +51,112 @@ export default function AdminCategories() {
     );
   };
 
+  // ─── Mutations ───
+  const createCatMutation = useMutation({
+    mutationFn: (data) => createCategory(data),
+    onSuccess: (res) => {
+      import('../../utils/toast').then(m => m.toastSuccess('Category created'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setHighlightedId(res.data.category.category_id || res.data.category.id);
+      setTimeout(() => setHighlightedId(null), 1000);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to create category'))
+  });
+
+  const updateCatMutation = useMutation({
+    mutationFn: ({ id, data }) => updateCategory(id, data),
+    onSuccess: (res) => {
+      import('../../utils/toast').then(m => m.toastSuccess('Category updated'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setHighlightedId(res.data.category.category_id || res.data.category.id);
+      setTimeout(() => setHighlightedId(null), 1000);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to update category'))
+  });
+
+  const deleteCatMutation = useMutation({
+    mutationFn: (id) => deleteCategory(id),
+    onSuccess: () => {
+      import('../../utils/toast').then(m => m.toastSuccess('Category deleted'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setConfirmDeleteCat(null);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to delete category (ensure it has no active services)'))
+  });
+
+  const createSubMutation = useMutation({
+    mutationFn: ({ catId, data }) => createSubcategory(catId, data),
+    onSuccess: (res) => {
+      import('../../utils/toast').then(m => m.toastSuccess('Subcategory created'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setHighlightedId(res.data.subcategory.subcategory_id || res.data.subcategory.id);
+      setTimeout(() => setHighlightedId(null), 1000);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to create subcategory'))
+  });
+
+  const updateSubMutation = useMutation({
+    mutationFn: ({ subId, data }) => updateSubcategory(subId, data),
+    onSuccess: (res) => {
+      import('../../utils/toast').then(m => m.toastSuccess('Subcategory updated'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setHighlightedId(res.data.subcategory.subcategory_id || res.data.subcategory.id);
+      setTimeout(() => setHighlightedId(null), 1000);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to update subcategory'))
+  });
+
+  const deleteSubMutation = useMutation({
+    mutationFn: (subId) => deleteSubcategory(subId),
+    onSuccess: () => {
+      import('../../utils/toast').then(m => m.toastSuccess('Subcategory deleted'));
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setConfirmDeleteSub(null);
+    },
+    onError: () => import('../../utils/toast').then(m => m.toastError('Failed to delete subcategory'))
+  });
+
   // ─── Category Handlers ───
   const handleSaveCategory = (catData) => {
     const isEdit = !!editingCategory;
+    const { id, ...data } = catData;
     if (isEdit) {
-      updateCategory(catData);
-      setHighlightedId(catData.id);
+      updateCatMutation.mutate({ id: editingCategory.id, data: { name: data.name, slug: data.slug, icon: data.icon, is_active: data.isActive } });
     } else {
-      const newCat = {
-        ...catData,
-        id: `cat_${Date.now()}`,
-        servicesCount: 0,
-        subcategories: []
-      };
-      addCategory(newCat);
-      setHighlightedId(newCat.id);
+      createCatMutation.mutate({ name: data.name, slug: data.slug, icon: data.icon, is_active: data.isActive });
     }
-    
-    setTimeout(() => setHighlightedId(null), 1000);
     setShowCategoryModal(false);
     setEditingCategory(null);
   };
 
-  const handleToggleCatStatus = (id) => {
-    toggleCategoryStatus(id);
+  const handleToggleCatStatus = (id, currentStatus) => {
+    updateCatMutation.mutate({ id, data: { is_active: !currentStatus } });
   };
 
   const handleDeleteCategory = (id) => {
-    deleteCategory(id);
-    setConfirmDeleteCat(null);
+    deleteCatMutation.mutate(id);
   };
 
   // ─── Subcategory Handlers ───
   const handleSaveSubcategory = (catId, subData) => {
     const isEdit = !!editingSubcat;
+    const { id, ...data } = subData;
     if (isEdit) {
-      updateSubcategory(catId, subData);
-      setHighlightedId(subData.id);
+      updateSubMutation.mutate({ subId: editingSubcat.id, data: { name: data.name, slug: data.slug, is_active: data.isActive } });
     } else {
-      const newSub = {
-        ...subData,
-        id: `sub_${Date.now()}`,
-        servicesCount: 0
-      };
-      addSubcategory(catId, newSub);
-      setHighlightedId(newSub.id);
+      createSubMutation.mutate({ catId, data: { name: data.name, slug: data.slug, is_active: data.isActive } });
       if (!expandedIds.includes(catId)) toggleExpand(catId);
     }
-
-    setTimeout(() => setHighlightedId(null), 1000);
     setShowSubModal(null);
     setEditingSubcat(null);
   };
 
-  const handleToggleSubStatus = (catId, subId) => {
-    toggleSubcategoryStatus(catId, subId);
+  const handleToggleSubStatus = (subId, currentStatus) => {
+    updateSubMutation.mutate({ subId, data: { is_active: !currentStatus } });
   };
 
-  const handleDeleteSubcategory = (catId, subId) => {
-    deleteSubcategory(catId, subId);
-    setConfirmDeleteSub(null);
+  const handleDeleteSubcategory = (subId) => {
+    deleteSubMutation.mutate(subId);
   };
 
   return (
@@ -157,7 +204,9 @@ export default function AdminCategories() {
 
         {/* ══ SECTION 3: CATEGORIES LIST ══ */}
         <div className="flex flex-col gap-3">
-          {categories.map((cat) => {
+          {isLoading ? (
+            <div className="text-center p-8 text-[#8B8FA8]">Loading categories...</div>
+          ) : categories.map((cat) => {
             const isExpanded = expandedIds.includes(cat.id);
             const isConfirmDelete = confirmDeleteCat === cat.id;
             const isHighlighted = highlightedId === cat.id;
@@ -229,7 +278,7 @@ export default function AdminCategories() {
                           {cat.isActive ? 'Active' : 'Inactive'}
                         </span>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={cat.isActive} onChange={() => handleToggleCatStatus(cat.id)} />
+                          <input type="checkbox" className="sr-only peer" checked={cat.isActive} onChange={() => handleToggleCatStatus(cat.id, cat.isActive)} disabled={updateCatMutation.isPending} />
                           <div className="w-9 h-5 bg-[#2A2D3A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                         </label>
                       </div>
@@ -269,7 +318,7 @@ export default function AdminCategories() {
                               <span className="text-sm font-bold text-red-400">Delete "{sub.name}"?</span>
                               <div className="flex items-center gap-2">
                                 <button onClick={() => setConfirmDeleteSub(null)} className="px-3 py-1.5 bg-[#2A2D3A] hover:bg-[#3b3f54] text-white text-xs font-bold rounded-md transition-colors">Cancel</button>
-                                <button onClick={() => handleDeleteSubcategory(cat.id, sub.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-md transition-colors">Confirm Delete</button>
+                                <button onClick={() => handleDeleteSubcategory(sub.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-md transition-colors">Confirm Delete</button>
                               </div>
                             </div>
                           );
@@ -292,7 +341,7 @@ export default function AdminCategories() {
                             
                             <div className="flex items-center gap-3">
                               <label className="relative inline-flex items-center cursor-pointer" title={sub.isActive ? 'Active' : 'Inactive'}>
-                                <input type="checkbox" className="sr-only peer" checked={sub.isActive} onChange={() => handleToggleSubStatus(cat.id, sub.id)} />
+                                <input type="checkbox" className="sr-only peer" checked={sub.isActive} onChange={() => handleToggleSubStatus(sub.id, sub.isActive)} disabled={updateSubMutation.isPending} />
                                 <div className="w-7 h-4 bg-[#2A2D3A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
                               </label>
                               <div className="w-px h-4 bg-[#2A2D3A]"></div>

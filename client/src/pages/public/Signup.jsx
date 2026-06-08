@@ -498,14 +498,23 @@ function Signup() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  const { data: fetchResponse, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.get('/categories').then(res => res.data)
+  const { data: fetchResponse, isLoading: categoriesLoading, error: categoriesError } = useQuery({
+    queryKey: ['categories-public'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/categories');
+        console.log('Categories API response:', res.data);
+        return res.data;
+      } catch (err) {
+        console.error('Categories API error:', err);
+        return { data: { categories: [] } };
+      }
+    }
   });
   
-  // The backend returns { success: true, data: { categories: [...] } }
   const rawCategories = fetchResponse?.data?.categories || fetchResponse?.data || fetchResponse;
   const categories = Array.isArray(rawCategories) ? rawCategories : [];
+  console.log('Mapped categories:', categories);
 
   const seedRole = location.state?.role === 'vendor' ? 'vendor' : 'customer';
 
@@ -698,35 +707,38 @@ function Signup() {
       return;
     }
 
-    // ── Build payload matching backend register endpoint ──
-    // Backend expects: email, password, username, full_name, phone, role
-    // Vendor extras:   vendor_type, company_name, company_description,
-    //                  city, iban, preferred_category_id, social_links
-    const payload = {
-      full_name:  data.full_name,
-      username:   data.username,
-      email:      data.email.trim().toLowerCase(),
-      phone:      data.phone,
-      password:   data.password,
-      role:       data.role,
-    };
+    // ── Build FormData payload matching backend register endpoint ──
+    const formData = new FormData();
+    formData.append('full_name', data.full_name);
+    formData.append('username', data.username);
+    formData.append('email', data.email.trim().toLowerCase());
+    formData.append('phone', data.phone);
+    formData.append('password', data.password);
+    formData.append('role', data.role);
 
     if (data.role === 'vendor') {
-      payload.vendor_type          = data.vendor_type;
-      payload.company_name         = data.company_name         || undefined;
-      payload.company_description  = data.company_description  || undefined;
-      // owner_signatory_name maps to the signatory field; backend stores via full_name on vendor_profiles
-      payload.owner_signatory_name = data.owner_signatory_name || undefined;
-      payload.city                 = data.city                 || undefined;
-      payload.iban                 = data.iban                 || undefined;
-      payload.preferred_category_id = data.category ? parseInt(data.category, 10) : undefined;
-      payload.social_links          = socialMediaLinks.length > 0
-        ? socialMediaLinks.filter(l => l.url.trim().length > 3)
-        : undefined;
-      payload.portfolio_website     = data.portfolio_website    || undefined;
+      formData.append('vendor_type', data.vendor_type);
+      if (data.company_name) formData.append('company_name', data.company_name);
+      if (data.company_description) formData.append('company_description', data.company_description);
+      if (data.owner_signatory_name) formData.append('owner_signatory_name', data.owner_signatory_name);
+      if (data.city) formData.append('city', data.city);
+      if (data.iban) formData.append('iban', data.iban);
+      if (data.category) formData.append('preferred_category_id', parseInt(data.category, 10));
+      
+      const validLinks = socialMediaLinks.filter(l => l.url.trim().length > 3);
+      if (validLinks.length > 0) {
+        formData.append('social_links', JSON.stringify(validLinks));
+      }
+      
+      if (data.portfolio_website) formData.append('portfolio_website', data.portfolio_website);
+
+      // Append Files
+      if (docCr) formData.append('commercialRegister', docCr);
+      if (docNidFront) formData.append('nationalIdFront', docNidFront);
+      if (docNidBack) formData.append('nationalIdBack', docNidBack);
     }
 
-    registerMutation.mutate(payload);
+    registerMutation.mutate(formData);
   };
 
   const ibanLabel = isCompany
@@ -997,6 +1009,10 @@ function Signup() {
                         <option value="">Select category…</option>
                         {categoriesLoading ? (
                           <option value="" disabled>Loading categories...</option>
+                        ) : categoriesError ? (
+                          <option value="" disabled>Error loading categories</option>
+                        ) : categories.length === 0 ? (
+                          <option value="" disabled>No categories available</option>
                         ) : (
                           categories.map((c) => (
                             <option key={c.category_id || c.id} value={c.category_id || c.id}>{c.name}</option>

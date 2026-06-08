@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   SlidersHorizontal, LayoutGrid, List,
@@ -240,7 +241,7 @@ const AllServicesSection = React.memo(function AllServicesSection({
   const totalCount = pagination.total  ?? 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div id="services-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* ── TWO-COLUMN LAYOUT ────────────────────────────── */}
       <div className="flex gap-6 items-start">
@@ -557,6 +558,19 @@ function Services() {
   // ── Filter state — single source of truth for both
   //    desktop sidebar and mobile drawer ──────────────────────
   const { filters, updateFilter, clearFilters } = useUrlFilters();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#all-services') {
+      const el = document.getElementById('all-services');
+      if (el) {
+        setTimeout(() => {
+          const y = el.getBoundingClientRect().top + window.scrollY - 120;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
 
   // ── Filter handlers ───────────────────────────────────────
   // Reset page to 1 when any filter other than page changes

@@ -122,7 +122,7 @@ function StarDisplay({ rating, size = 13 }) {
 
 function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
-  const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice } = service;
+  const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice, eventTypes } = service;
 
 
 
@@ -240,6 +240,36 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
 
 
+        {eventTypes && eventTypes.length > 0 && (
+
+          <div className="flex flex-wrap gap-1 mt-0.5">
+
+            {eventTypes.slice(0, 2).map(et => (
+
+              <span key={et.event_type_id} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-gray-50 text-gray-500 uppercase tracking-wider border border-gray-100">
+
+                {et.name}
+
+              </span>
+
+            ))}
+
+            {eventTypes.length > 2 && (
+
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-gray-50 text-gray-500 uppercase tracking-wider border border-gray-100">
+
+                +{eventTypes.length - 2}
+
+              </span>
+
+            )}
+
+          </div>
+
+        )}
+
+
+
         <div className="mt-auto flex flex-col gap-2.5">
 
           <div className="w-full h-px bg-gray-100" aria-hidden="true" />
@@ -326,7 +356,7 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
 function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
-  const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice } = service;
+  const { id, image, category, title, vendorName, location, rating, reviewCount, basePrice, eventTypes } = service;
 
 
 
@@ -469,6 +499,38 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
             <span className="text-sm text-gray-400">{location}</span>
 
           </div>
+
+
+
+          {/* Event Types Pills */}
+
+          {eventTypes && eventTypes.length > 0 && (
+
+            <div className="flex flex-wrap gap-1 mt-1.5">
+
+              {eventTypes.slice(0, 3).map(et => (
+
+                <span key={et.event_type_id} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 uppercase tracking-wider border border-gray-100">
+
+                  {et.name}
+
+                </span>
+
+              ))}
+
+              {eventTypes.length > 3 && (
+
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 uppercase tracking-wider border border-gray-100">
+
+                  +{eventTypes.length - 3}
+
+                </span>
+
+              )}
+
+            </div>
+
+          )}
 
 
 

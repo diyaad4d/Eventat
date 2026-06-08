@@ -8,21 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toastSuccess, toastWarning, toastError } from '../../utils/toast';
 import vendorService from '../../services/vendor.service';
 
-// ── Static lookup data ─────────────────────────────────────────────────────
-// MOCK_CATEGORIES kept for the subcategory dropdown UI only.
-// The category_id is resolved when the real services list is available.
-const MOCK_CATEGORIES = {
-  'Venue':                    ['Hotels', 'Halls', 'Farms', 'Indoor', 'Outdoor'],
-  'Event Planning':           ['Full-Service Planner', 'Day-Of Coordinator', 'Corporate Events'],
-  'Catering':                 ['Buffet', 'Plated Dinner', 'Food Trucks', 'Finger Food'],
-  'Cakes & Desserts':         ['Wedding Cakes', 'Custom Cakes', 'Dessert Tables', 'Cupcakes'],
-  'Photography & Videography':['Wedding Photography', 'Portrait', 'Drone/Aerial', 'Videography'],
-  'Decoration':               ['Floral', 'Lighting', 'Themed', 'Balloons'],
-  'Music & Entertainment':    ['Live Band', 'DJ', 'Zaffa', 'Cultural Performers'],
-  'Makeup & Beauty':          ['Bridal Makeup', 'Hair Styling', 'Group Packages'],
-  'Transportation':           ['Luxury Cars', 'Buses', 'Motorcycles', 'Valet'],
-  'Invitations & Prints':     ['Digital Invitations', 'Printed Cards', 'Menus & Programs'],
-};
+import { getCategories, getEventTypes } from '../../services/services.service';
 
 const CITIES = [
   'Amman', 'Irbid', 'Zarqa', 'Balqa (Salt)', 'Madaba', 'Karak', 
@@ -38,6 +24,7 @@ const EMPTY_FORM = {
   city: 'Amman', capacity: '', tags: [], isActive: true,
   coverImage: null,
   galleryImages: [],
+  eventTypes: [],
 };
 
 function VendorServiceForm() {
@@ -50,6 +37,7 @@ function VendorServiceForm() {
   const [tagInput, setTagInput] = useState('');
   const [errors,   setErrors]   = useState({});
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const coverInputRef   = useRef(null);
   const galleryInputRef = useRef(null);
@@ -71,11 +59,11 @@ function VendorServiceForm() {
 
   // Pre-populate form when edit data arrives
   useEffect(() => {
-    if (isEditMode && editServiceData) {
+    if (isEditMode && editServiceData && !formInitialized) {
       setFormData({
         title:            editServiceData.title           ?? '',
-        category:         editServiceData.category_name   ?? '',
-        subcategory:      editServiceData.subcategory_name ?? '',
+        category:         editServiceData.category_id     ? String(editServiceData.category_id) : '',
+        subcategory:      editServiceData.subcategory_id  ? String(editServiceData.subcategory_id) : '',
         description:      editServiceData.description      ?? '',
         pricingUnit:      editServiceData.pricing_unit     ?? 'per_event',
         customPricingUnit: '',
@@ -89,9 +77,11 @@ function VendorServiceForm() {
           ? { id: 'existing', url: editServiceData.primary_image_url, file: null }
           : null,
         galleryImages:    [],
+        eventTypes:       editServiceData.event_types?.map(e => e.event_type_id) ?? [],
       });
+      setFormInitialized(true);
     }
-  }, [editServiceData, isEditMode]);
+  }, [editServiceData, isEditMode, formInitialized]);
 
   // ── Mutation: create service ───────────────────────────────────────────────
   const createMutation = useMutation({
@@ -143,9 +133,6 @@ function VendorServiceForm() {
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   // ── Build API payload ─────────────────────────────────────────────────────
-  // NOTE: No tags or category_id resolution by name — the API uses category_id
-  // but the form only has category name. For now we send what we have.
-  // category_id is intentionally omitted on update (only send changed fields).
   const buildPayload = () => {
     const payload = {
       title:        formData.title.trim(),
@@ -156,7 +143,12 @@ function VendorServiceForm() {
         : formData.pricingUnit,
       city:         formData.city,
       is_active:    formData.isActive,
+      category_id:  parseInt(formData.category, 10),
+      event_types:  formData.eventTypes,
     };
+    if (formData.subcategory) {
+      payload.subcategory_id = parseInt(formData.subcategory, 10);
+    }
     if (formData.capacity) {
       payload.capacity = parseInt(formData.capacity, 10);
     }
@@ -170,9 +162,6 @@ function VendorServiceForm() {
     if (isEditMode) {
       updateMutation.mutate(payload);
     } else {
-      // category_id is required for create — warn if category not mappable
-      // For now the form sends the name; the backend validates category_id.
-      // A future improvement would fetch categories and map name → id here.
       createMutation.mutate(payload);
     }
   };
@@ -243,6 +232,20 @@ function VendorServiceForm() {
     setFormData({ ...formData, galleryImages: formData.galleryImages.filter((img) => img.id !== imgId) });
 
   // ── Edit loading state ────────────────────────────────────────────────────
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+    staleTime: 1000 * 60 * 60,
+  });
+  const categoriesList = categoriesData?.data?.categories ?? [];
+
+  const { data: eventTypesData } = useQuery({
+    queryKey: ['event-types'],
+    queryFn: getEventTypes,
+    staleTime: 1000 * 60 * 60,
+  });
+  const eventTypesList = eventTypesData?.data?.eventTypes ?? [];
+
   if (isEditMode && editLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto pb-12 flex items-center justify-center min-h-[400px]">
@@ -255,6 +258,9 @@ function VendorServiceForm() {
   }
 
   const STEP_LABELS = ['Basic Info', 'Details', 'Media', 'Review'];
+
+  const selectedCatObj = categoriesList.find(c => String(c.category_id) === String(formData.category));
+  const subcategoriesList = selectedCatObj?.subcategories ?? [];
 
   const renderStepIndicator = () => (
     <div className="flex items-center justify-between mb-8 relative pb-10">
@@ -299,7 +305,7 @@ function VendorServiceForm() {
             className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] text-sm bg-white transition-all ${errors.category ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
           >
             <option value="">Select Category</option>
-            {Object.keys(MOCK_CATEGORIES).map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+            {categoriesList.map((cat) => <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>)}
           </select>
           {errors.category && <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1"><AlertCircle size={12} /> {errors.category}</p>}
         </div>
@@ -308,11 +314,11 @@ function VendorServiceForm() {
           <select
             value={formData.subcategory}
             onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
-            disabled={!formData.category}
+            disabled={!formData.category || subcategoriesList.length === 0}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] text-sm bg-white disabled:bg-gray-50"
           >
             <option value="">Select Subcategory</option>
-            {formData.category && MOCK_CATEGORIES[formData.category]?.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
+            {subcategoriesList.map((sub) => <option key={sub.subcategory_id} value={sub.subcategory_id}>{sub.name}</option>)}
           </select>
         </div>
       </div>
@@ -381,6 +387,37 @@ function VendorServiceForm() {
       <div>
         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Max Capacity (Guests)</label>
         <input type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: e.target.value })} placeholder="e.g., 500 (Leave blank if not applicable)" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] text-sm" />
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Applicable Event Types</label>
+        <p className="text-xs text-gray-500 mb-3">Select the events your service is perfectly suited for.</p>
+        <div className="flex flex-wrap gap-2">
+          {eventTypesList.map((et) => {
+            const isSelected = formData.eventTypes.includes(et.event_type_id);
+            return (
+              <button
+                key={et.event_type_id}
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    eventTypes: isSelected 
+                      ? prev.eventTypes.filter(id => id !== et.event_type_id)
+                      : [...prev.eventTypes, et.event_type_id]
+                  }));
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                  isSelected 
+                    ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)]' 
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {et.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div>
@@ -484,8 +521,8 @@ function VendorServiceForm() {
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-1 bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] text-xs font-bold uppercase tracking-wider rounded-md">{formData.category || 'Category'}</span>
-              {formData.subcategory && <span className="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-md">{formData.subcategory}</span>}
+              <span className="px-2.5 py-1 bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] text-xs font-bold uppercase tracking-wider rounded-md">{selectedCatObj?.name || 'Category'}</span>
+              {formData.subcategory && <span className="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-md">{subcategoriesList.find(s => String(s.subcategory_id) === String(formData.subcategory))?.name || 'Subcategory'}</span>}
             </div>
             <h3 className="text-2xl font-extrabold text-[var(--color-dark)] mb-2 truncate">{formData.title || 'Untitled Service'}</h3>
             <p className="text-xl font-black text-[var(--color-dark)] mb-4">{formData.basePrice || '0'} JOD <span className="text-sm font-medium text-gray-500 normal-case">/ {finalPricingUnit}</span></p>

@@ -129,12 +129,26 @@ const getAllServices = async (req, res, next) => {
       `);
     }
 
+    if (date && date.trim()) {
+      params.push(date.trim());
+      // A service is considered unavailable if there is an accepted/completed booking on this date.
+      // Note: We cast to DATE to ensure time parts are ignored.
+      conditions.push(`
+        s.service_id NOT IN (
+          SELECT service_id 
+          FROM event_plan_items 
+          WHERE event_date = $${params.length}::DATE 
+          AND vendor_item_status IN ('accepted', 'completed')
+        )
+      `);
+    }
+
     const orderByMap = {
-      recommended: 's.avg_rating DESC, s.review_count DESC',
-      price_asc:   's.base_price ASC',
-      price_desc:  's.base_price DESC',
-      rating:      's.avg_rating DESC, s.review_count DESC',
-      newest:      's.created_at DESC',
+      recommended: 'avg_rating DESC, review_count DESC',
+      price_asc:   'base_price ASC',
+      price_desc:  'base_price DESC',
+      rating:      'avg_rating DESC, review_count DESC',
+      newest:      'created_at DESC',
     };
     const orderBy = orderByMap[sort];
 
@@ -206,11 +220,13 @@ const getServiceById = async (req, res, next) => {
     if (isNaN(id)) return res.status(400).json({ success: false, error: 'Invalid service ID.' });
     const serviceId = parseInt(id, 10);
 
+    const authUser = req.user;
+
     //  Optimized Query without GROUP BY and slow JOINs
     const serviceRes = await db.query(`
       SELECT * FROM (
         ${baseServiceSelect()}
-        WHERE s.service_id = $1 AND s.is_active = true AND vp.registration_status = 'approved'
+        WHERE s.service_id = $1 AND vp.registration_status = 'approved'
       ) AS single_service
     `, [serviceId]);
 
@@ -219,6 +235,13 @@ const getServiceById = async (req, res, next) => {
     }
 
     const row = serviceRes.rows[0];
+
+    // Check visibility for inactive services
+    if (!row.is_active) {
+      if (!authUser || (authUser.role !== 'admin' && authUser.userId !== row.vendor_user_id)) {
+        return res.status(404).json({ success: false, error: 'Service not found.', code: 'SERVICE_NOT_FOUND' });
+      }
+    }
 
     const service = {
       service_id:        row.service_id,
@@ -354,7 +377,7 @@ const getServicesByEventType = async (req, res, next) => {
     const page   = Math.max(1, parseInt(req.query.page)  || 1);
     const limit  = Math.min(48, Math.max(1, parseInt(req.query.limit) || 12));
     const offset = (page - 1) * limit;
-    const { category, subcategory, search, min_price, max_price, cities, sort = 'recommended' } = req.query;
+    const { categories, subcategory, search, min_price, max_price, cities, sort = 'recommended' } = req.query;
 
     const etResult = await db.query(`SELECT event_type_id, name, slug, description, image_url FROM event_types WHERE LOWER(slug) = LOWER($1)`, [slug]);
     if (etResult.rows.length === 0) return res.status(404).json({ success: false, error: 'Event type not found.', code: 'EVENT_TYPE_NOT_FOUND' });
@@ -367,8 +390,8 @@ const getServicesByEventType = async (req, res, next) => {
     ];
     const params = ['approved', eventTypeRow.event_type_id];
 
-    if (category && category.trim()) {
-      const cats = category.split(',').map(s => s.trim()).filter(Boolean);
+    if (categories && categories.trim()) {
+      const cats = categories.split(',').map(s => s.trim()).filter(Boolean);
       if (cats.length > 0) { params.push(cats); conditions.push(`c.slug = ANY($${params.length}::text[])`); }
     }
     if (subcategory && subcategory.trim()) { params.push(subcategory.trim()); conditions.push(`sc.name = $${params.length}`); }
@@ -384,11 +407,11 @@ const getServicesByEventType = async (req, res, next) => {
     }
 
     const orderByMap = {
-      recommended: 's.avg_rating DESC, s.review_count DESC',
-      price_asc:   's.base_price ASC',
-      price_desc:  's.base_price DESC',
-      rating:      's.avg_rating DESC, s.review_count DESC',
-      newest:      's.created_at DESC',
+      recommended: 'avg_rating DESC, review_count DESC',
+      price_asc:   'base_price ASC',
+      price_desc:  'base_price DESC',
+      rating:      'avg_rating DESC, review_count DESC',
+      newest:      'created_at DESC',
     };
     const orderBy = orderByMap[sort] ?? orderByMap.recommended;
 

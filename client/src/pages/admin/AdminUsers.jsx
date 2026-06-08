@@ -7,98 +7,75 @@ import EmptyState from '../../components/shared/EmptyState';
 import PageTransition from '../../components/shared/PageTransition';
 import { toastWarning, toastSuccess } from '../../utils/toast';
 
-// ─────────────────────────────────────────────────────────────
-//  MOCK DATA
-// ─────────────────────────────────────────────────────────────
-
-const MOCK_USERS = [
-  // 1 Admin
-  { id: 'u001', name: 'Tareq Admin', email: 'admin@eventat.com', role: 'admin', joinDate: '2022-01-10', lastActive: 'Just now', status: 'active', avatar: 'https://i.pravatar.cc/150?img=11', bookingsCount: 0, servicesCount: 0, city: 'Amman' },
-  
-  // 4 Vendors
-  { id: 'u002', name: 'Khalid Al-Mansour', email: 'khalid@royalgardens.jo', role: 'vendor', joinDate: '2024-03-15', lastActive: 'Yesterday', status: 'active', avatar: 'https://i.pravatar.cc/150?img=12', bookingsCount: 0, servicesCount: 3, city: 'Amman' },
-  { id: 'u003', name: 'Sarah Qasim', email: 'sarah.q@elitecatering.com', role: 'vendor', joinDate: '2024-05-20', lastActive: '2 hours ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=5', bookingsCount: 0, servicesCount: 8, city: 'Amman' },
-  { id: 'u004', name: 'Tariq Haddad', email: 'tariq@goldenmoments.jo', role: 'vendor', joinDate: '2025-01-10', lastActive: '3 days ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=33', bookingsCount: 0, servicesCount: 4, city: 'Irbid' },
-  { id: 'u005', name: 'Omar Ziad', email: 'omar.dj@ammanstars.com', role: 'vendor', joinDate: '2025-06-05', lastActive: 'Last week', status: 'active', avatar: 'https://i.pravatar.cc/150?img=15', bookingsCount: 0, servicesCount: 2, city: 'Amman' },
-
-  // 14 Customers + 1 Banned Customer (Total 15 Customers)
-  { id: 'u006', name: 'Ahmad Al-Rashid', email: 'ahmad@example.com', role: 'customer', joinDate: '2025-03-15', lastActive: 'Yesterday', status: 'active', avatar: 'https://i.pravatar.cc/150?img=8', bookingsCount: 7, servicesCount: 0, city: 'Amman' },
-  { id: 'u007', name: 'Lina Yassin', email: 'lina@example.com', role: 'customer', joinDate: '2025-04-12', lastActive: '2 days ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=9', bookingsCount: 2, servicesCount: 0, city: 'Zarqa' },
-  { id: 'u008', name: 'Yousef Nabeel', email: 'yousef@example.com', role: 'customer', joinDate: '2025-08-01', lastActive: 'Just now', status: 'active', avatar: 'https://i.pravatar.cc/150?img=13', bookingsCount: 1, servicesCount: 0, city: 'Amman' },
-  { id: 'u009', name: 'Rania Haddad', email: 'rania.h@example.com', role: 'customer', joinDate: '2025-09-15', lastActive: '5 hours ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=20', bookingsCount: 4, servicesCount: 0, city: 'Salt' },
-  { id: 'u010', name: 'Firas Jaber', email: 'firas@example.com', role: 'customer', joinDate: '2025-11-20', lastActive: '1 week ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=53', bookingsCount: 0, servicesCount: 0, city: 'Jerash' },
-  { id: 'u011', name: 'Amal Saqer', email: 'amal.s@example.com', role: 'customer', joinDate: '2026-01-05', lastActive: 'Yesterday', status: 'active', avatar: 'https://i.pravatar.cc/150?img=49', bookingsCount: 3, servicesCount: 0, city: 'Amman' },
-  { id: 'u012', name: 'Ibrahim Khawaja', email: 'ibrahim.k@example.com', role: 'customer', joinDate: '2026-02-14', lastActive: '2 weeks ago', status: 'banned', avatar: 'https://i.pravatar.cc/150?img=68', bookingsCount: 0, servicesCount: 0, city: 'Aqaba' },
-  { id: 'u013', name: 'Mona Zeid', email: 'mona.z@example.com', role: 'customer', joinDate: '2026-03-01', lastActive: '1 month ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=44', bookingsCount: 1, servicesCount: 0, city: 'Irbid' },
-  { id: 'u014', name: 'Kareem Ali', email: 'kareem@example.com', role: 'customer', joinDate: '2026-03-10', lastActive: 'Today', status: 'active', avatar: 'https://i.pravatar.cc/150?img=59', bookingsCount: 5, servicesCount: 0, city: 'Amman' },
-  { id: 'u015', name: 'Nour Kareem', email: 'nour.k@example.com', role: 'customer', joinDate: '2026-03-15', lastActive: 'Yesterday', status: 'active', avatar: 'https://i.pravatar.cc/150?img=32', bookingsCount: 2, servicesCount: 0, city: 'Madaba' },
-  { id: 'u016', name: 'Hassan Ali', email: 'hassan.ali@example.com', role: 'customer', joinDate: '2026-04-05', lastActive: '4 days ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=60', bookingsCount: 1, servicesCount: 0, city: 'Amman' },
-  { id: 'u017', name: 'Zeina Mahmoud', email: 'zeina.m@example.com', role: 'customer', joinDate: '2026-04-20', lastActive: 'Yesterday', status: 'active', avatar: 'https://i.pravatar.cc/150?img=47', bookingsCount: 6, servicesCount: 0, city: 'Amman' },
-  { id: 'u018', name: 'Majed Othman', email: 'majed.o@example.com', role: 'customer', joinDate: '2026-05-01', lastActive: 'Today', status: 'active', avatar: 'https://i.pravatar.cc/150?img=14', bookingsCount: 3, servicesCount: 0, city: 'Aqaba' },
-  { id: 'u019', name: 'Rami Suleiman', email: 'rami.s@example.com', role: 'customer', joinDate: '2026-05-10', lastActive: '3 hours ago', status: 'active', avatar: 'https://i.pravatar.cc/150?img=3', bookingsCount: 0, servicesCount: 0, city: 'Amman' },
-  { id: 'u020', name: 'Sami Daoud', email: 'sami.d@example.com', role: 'customer', joinDate: '2026-05-20', lastActive: 'Just now', status: 'active', avatar: 'https://i.pravatar.cc/150?img=7', bookingsCount: 2, servicesCount: 0, city: 'Irbid' },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getUsers, toggleUserBan } from '../../services/admin.service';
 
 // Helper to format join date
 function formatJoinDate(dateStr) {
+  if (!dateStr) return 'N/A';
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState(MOCK_USERS);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [page, setPage] = useState(1);
   const [confirmBanId, setConfirmBanId] = useState(null);
 
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const ITEMS_PER_PAGE = 8;
 
-  const customersCount = users.filter(u => u.role === 'customer').length;
-  const vendorsCount = users.filter(u => u.role === 'vendor').length;
-  const bannedCount = users.filter(u => u.status === 'banned').length;
+  const roleParam = roleFilter === 'All Roles' ? undefined : roleFilter.toLowerCase();
+  const statusParam = statusFilter === 'All Status' ? undefined : statusFilter.toLowerCase();
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => {
-      const matchesSearch = 
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesRole = 
-        roleFilter === 'All Roles' || 
-        u.role.toLowerCase() === roleFilter.toLowerCase();
-      
-      const matchesStatus = 
-        statusFilter === 'All Status' || 
-        u.status.toLowerCase() === statusFilter.toLowerCase();
-      
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-users', roleParam, statusParam, debouncedSearch, page],
+    queryFn: () => getUsers({
+      role: roleParam,
+      status: statusParam,
+      search: debouncedSearch || undefined,
+      page,
+      limit: ITEMS_PER_PAGE
+    }),
+  });
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const users = data?.data?.users || [];
+  const counts = data?.data?.counts || { customers: 0, vendors: 0, banned: 0 };
+  const pagination = data?.data?.pagination || { totalPages: 1, total: 0 };
+
+  const customersCount = counts.customers || 0;
+  const vendorsCount = counts.vendors || 0;
+  const bannedCount = counts.banned || 0;
+
+  const totalPages = pagination.totalPages;
+  const totalUsers = pagination.total;
   const startIndex = (page - 1) * ITEMS_PER_PAGE;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // If page is out of bounds after filtering, reset to 1
-  React.useEffect(() => {
-    if (page > totalPages && totalPages > 0) {
-      setPage(1);
+  const toggleBanMutation = useMutation({
+    mutationFn: (id) => toggleUserBan(id),
+    onSuccess: (res) => {
+      const isNowActive = res.data.user.is_active;
+      if (!isNowActive) toastWarning("User has been banned from the platform.");
+      else toastSuccess("User access restored.");
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setConfirmBanId(null);
+    },
+    onError: () => {
+      toastWarning("Failed to update user status.");
     }
-  }, [filteredUsers, page, totalPages]);
+  });
 
   const handleToggleBan = (id) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === id) {
-        const newStatus = u.status === 'active' ? 'banned' : 'active';
-        if (newStatus === 'banned') toastWarning("User has been banned from the platform.");
-        else toastSuccess("User access restored.");
-        return { ...u, status: newStatus };
-      }
-      return u;
-    }));
-    setConfirmBanId(null);
+    toggleBanMutation.mutate(id);
   };
 
   return (
@@ -187,7 +164,11 @@ export default function AdminUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2A2D3A]">
-                {paginatedUsers.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-[#8B8FA8]">Loading users...</td>
+                  </tr>
+                ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-16 bg-[#0F1117]">
                       {/* ══ SECTION 5: EMPTY STATE ══ */}
@@ -200,12 +181,12 @@ export default function AdminUsers() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedUsers.map((user) => {
+                  users.map((user) => {
                     // Render Ban Confirmation inline
-                    if (confirmBanId === user.id) {
+                    if (confirmBanId === user.user_id) {
                       const isBanAction = user.status === 'active';
                       return (
-                        <tr key={`confirm-${user.id}`} className="bg-red-500/10 border-l-4 border-red-500">
+                        <tr key={`confirm-${user.user_id}`} className="bg-red-500/10 border-l-4 border-red-500">
                           <td colSpan={8} className="p-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 text-red-400">
@@ -222,7 +203,8 @@ export default function AdminUsers() {
                                   Cancel
                                 </button>
                                 <button 
-                                  onClick={() => handleToggleBan(user.id)}
+                                  onClick={() => handleToggleBan(user.user_id)}
+                                  disabled={toggleBanMutation.isPending}
                                   className={`px-4 py-1.5 min-h-[44px] text-white text-xs font-bold rounded-md transition-colors ${
                                     isBanAction ? 'bg-red-500 hover:bg-red-400' : 'bg-emerald-500 hover:bg-emerald-400'
                                   }`}
@@ -239,12 +221,12 @@ export default function AdminUsers() {
                     // Render Standard Row
                     return (
                       <tr 
-                        key={user.id} 
+                        key={user.user_id} 
                         className={`hover:bg-[#22253A] transition-colors group ${user.role === 'admin' ? 'border-l-4 border-l-[var(--color-gold)]' : 'border-l-4 border-l-transparent'}`}
                       >
                         <td className="p-4 pl-6">
                           <div className="flex items-center gap-3">
-                            <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover border border-[#2A2D3A]" />
+                            <img src={user.avatar || 'https://i.pravatar.cc/150'} alt="" className="w-10 h-10 rounded-full object-cover border border-[#2A2D3A]" />
                             <div>
                               <p className="text-sm font-bold text-white group-hover:text-[var(--color-gold)] transition-colors">
                                 {user.name}
@@ -266,19 +248,19 @@ export default function AdminUsers() {
                           <span className="text-sm text-[#8B8FA8]">{formatJoinDate(user.joinDate)}</span>
                         </td>
                         <td className="p-4">
-                          <span className="text-sm text-[#8B8FA8]">{user.lastActive}</span>
+                          <span className="text-sm text-[#8B8FA8]">{user.lastActive || 'N/A'}</span>
                         </td>
                         <td className="p-4">
-                          <span className="text-sm text-[#8B8FA8]">{user.city}</span>
+                          <span className="text-sm text-[#8B8FA8]">{user.city || 'N/A'}</span>
                         </td>
                         <td className="p-4">
                           {user.role === 'customer' ? (
                             <div className="flex items-center gap-1.5 text-sm font-medium text-white">
-                              <Calendar size={14} className="text-[#8B8FA8]" /> {user.bookingsCount}
+                              <Calendar size={14} className="text-[#8B8FA8]" /> {user.bookingsCount || 0}
                             </div>
                           ) : user.role === 'vendor' ? (
                             <div className="flex items-center gap-1.5 text-sm font-medium text-white">
-                              <Briefcase size={14} className="text-[#8B8FA8]" /> {user.servicesCount}
+                              <Briefcase size={14} className="text-[#8B8FA8]" /> {user.servicesCount || 0}
                             </div>
                           ) : (
                             <span className="text-sm text-[#8B8FA8]">-</span>
@@ -295,7 +277,7 @@ export default function AdminUsers() {
                         <td className="p-4 pr-6 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button 
-                              onClick={() => console.log('Navigate to /users/' + user.id)}
+                              onClick={() => console.log('Navigate to /users/' + user.user_id)}
                               className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#8B8FA8] hover:text-[var(--color-gold)] hover:bg-[#2A2D3A] rounded-lg transition-colors"
                               title="View Profile"
                             >
@@ -303,7 +285,7 @@ export default function AdminUsers() {
                             </button>
                             {user.role !== 'admin' && (
                               <button 
-                                onClick={() => setConfirmBanId(user.id)}
+                                onClick={() => setConfirmBanId(user.user_id)}
                                 className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-colors ${
                                   user.status === 'active' 
                                     ? 'text-[#8B8FA8] hover:text-red-400 hover:bg-red-500/10' 
@@ -325,10 +307,10 @@ export default function AdminUsers() {
           </div>
           
           {/* ══ SECTION 4: TABLE FOOTER + PAGINATION ══ */}
-          {filteredUsers.length > 0 && (
+          {totalUsers > 0 && (
             <div className="p-4 border-t border-[#2A2D3A] bg-[#0F1117]/30 flex flex-col sm:flex-row justify-between items-center gap-4">
               <span className="text-sm text-[#8B8FA8]">
-                Showing <span className="font-bold text-white">{startIndex + 1}</span> to <span className="font-bold text-white">{Math.min(startIndex + ITEMS_PER_PAGE, filteredUsers.length)}</span> of <span className="font-bold text-white">{filteredUsers.length}</span> users
+                Showing <span className="font-bold text-white">{startIndex + 1}</span> to <span className="font-bold text-white">{Math.min(startIndex + ITEMS_PER_PAGE, totalUsers)}</span> of <span className="font-bold text-white">{totalUsers}</span> users
               </span>
               <div className="flex items-center gap-1">
                 <button 

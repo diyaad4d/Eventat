@@ -10,19 +10,26 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 // 1 GLOBAL MIDDLEWARES
-app.use(helmet()); // Secure HTTP headers
+app.use(helmet({ crossOriginResourcePolicy: false })); // Secure HTTP headers, allow cross-origin resource sharing for uploads
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse incoming JSON payloads
 app.use(morgan('combined')); // Request logging
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded documents statically
 
 // 2. RATE LIMITING
-// Max 100 requests per 15 minutes per IP applied to all API endpoints
+// Max 500 requests per 15 minutes per IP applied to all API endpoints
+// (raised from 100 to avoid dev/test hitting limits during rapid iteration)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500,
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for localhost during development
+    const ip = req.ip || req.connection?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
 });
 app.use('/api/', apiLimiter);
 

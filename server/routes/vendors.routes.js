@@ -62,6 +62,8 @@ const validateCreateService = [
     .isLength({ min: 2 }).withMessage('city must be at least 2 characters.'),
   body('subcategory_id').optional().isInt({ min: 1 }).withMessage('subcategory_id must be a positive integer.'),
   body('capacity').optional().isInt({ min: 1 }).withMessage('capacity must be a positive integer.'),
+  body('event_types').optional().isArray().withMessage('event_types must be an array.')
+    .custom((arr) => arr.every(Number.isInteger)).withMessage('All event_types must be integers.'),
 ];
 
 // ── Service Routes ──────────────────────────────────────────────────────────
@@ -109,6 +111,8 @@ router.patch('/vendor/services/:id',
     body('subcategory_id').optional().isInt({ min: 1 }).withMessage('subcategory_id must be a positive integer.'),
     body('city').optional().isLength({ min: 2 }).withMessage('city must be at least 2 characters.'),
     body('capacity').optional().isInt({ min: 1 }).withMessage('capacity must be a positive integer.'),
+    body('event_types').optional().isArray().withMessage('event_types must be an array.')
+      .custom((arr) => arr.every(Number.isInteger)).withMessage('All event_types must be integers.'),
   ],
   validate,
   vendorsCtrl.updateService

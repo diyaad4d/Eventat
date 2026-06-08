@@ -30,6 +30,7 @@ export const normalizeService = (raw) => ({
   reviewCount:  parseInt(raw.review_count) || 0,
   basePrice:    parseFloat(raw.base_price) || 0,
   pricingUnit:  raw.pricing_unit    ?? 'per_event',
+  eventTypes:   raw.event_types     || [],
 });
 
 // ─────────────────────────────────────────────────────────────

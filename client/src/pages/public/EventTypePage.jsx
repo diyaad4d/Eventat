@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -122,6 +122,11 @@ function EventTypePage() {
   useEffect(() => {
     if (!cfg) navigate('/services', { replace: true });
   }, [cfg, navigate]);
+
+  // Always scroll to top when opening an Event Type page
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [eventType]);
 
   // Lifted filters state — shared by HeroBanner pills + FilteredServicesSection
   const { filters, updateFilter, clearFilters } = useUrlFilters(eventType);
@@ -954,7 +959,7 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
                   ) : (
                     <>
                       Showing{' '}
-                      <span className="font-extrabold text-[var(--color-dark)]">{Math.min(visibleN, totalCount)}</span>
+                      <span className="font-extrabold text-[var(--color-dark)]">{services.length}</span>
                       {' '}of{' '}
                       <span className="font-extrabold text-[var(--color-dark)]">{totalCount}</span>
                       {' '}results

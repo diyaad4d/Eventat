@@ -21,7 +21,8 @@ const api = axios.create({
 // ─────────────────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token;
+    // Try to get token from Zustand state first, fallback to raw localStorage key
+    const token = useAuthStore.getState().token || localStorage.getItem('eventat_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

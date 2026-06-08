@@ -35,7 +35,7 @@ const EVENT_HUB_CONFIG = {
     image:       'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80',
     tags:        ['Graduation Halls', 'Photography', 'Catering', 'Decoration', 'Entertainment'],
   },
-  'milestone-birthdays': {
+  'birthday': {
     label:       'Milestone Birthdays',
     emoji:       '🎂',
     headline:    'Make every milestone unforgettable',
@@ -62,7 +62,7 @@ const TAB_ORDER = [
   { value: '',                    label: 'All',       emoji: '✨' },
   { value: 'wedding',             label: 'Wedding',   emoji: '💍' },
   { value: 'graduation',          label: 'Graduation',emoji: '🎓' },
-  { value: 'milestone-birthdays', label: 'Milestones',emoji: '🎂' },
+  { value: 'birthday', label: 'Milestones',emoji: '🎂' },
   { value: 'corporate',           label: 'Corporate', emoji: '💼' },
 ];
 

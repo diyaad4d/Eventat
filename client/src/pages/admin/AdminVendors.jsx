@@ -11,427 +11,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useEffect } from 'react';
 import { toastSuccess, toastError } from '../../utils/toast';
 
-// ─────────────────────────────────────────────────────────────
-//  MOCK DATA — updated with vendor_type, documents, IBAN, payment
-// ─────────────────────────────────────────────────────────────
-
-const MOCK_VENDORS = [
-  {
-    id: 'v001',
-    vendorType: 'company',
-    companyName: 'Royal Gardens Venue',
-    ownerName: 'Khalid Al-Mansour',
-    signatoryName: 'Khalid Al-Mansour',
-    email: 'khalid@royalgardens.jo',
-    phone: '+962 79 123 4567',
-    category: 'Venue',
-    city: 'Amman',
-    registrationDate: '2026-05-10',
-    status: 'Pending',
-    about: 'We specialize in luxury wedding venues with outdoor and indoor seating up to 500 guests.',
-    avatar: 'https://i.pravatar.cc/150?img=11',
-    servicesCount: 3,
-    yearsInBusiness: 5,
-    // New fields
-    iban: 'JO94CBJO0010000000000131000302',
-    ibanMasked: '•••• •••• •••• 0302',
-
-    documents: {
-      commercialRegister: 'commercial_register_v001.pdf',
-      nationalIdFront: 'nid_front_v001.jpg',
-      nationalIdBack: 'nid_back_v001.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: 'www.royalgardens.jo',
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v002',
-    vendorType: 'company',
-    companyName: 'Elite Catering',
-    ownerName: 'Sarah Qasim',
-    signatoryName: 'Sarah Qasim',
-    email: 'sarah.q@elitecatering.com',
-    phone: '+962 78 987 6543',
-    category: 'Catering',
-    city: 'Amman',
-    registrationDate: '2026-05-12',
-    status: 'Approved',
-    about: 'Premium catering services offering local and international cuisines for large events.',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    servicesCount: 8,
-    yearsInBusiness: 12,
-    iban: 'JO94CBJO0010000000000241000418',
-    ibanMasked: '•••• •••• •••• 0418',
-    hasPendingChanges: true,
-    pendingData: { about: 'Premium catering services offering local and international cuisines. Now serving up to 1000 guests.' },
-
-    documents: {
-      commercialRegister: 'commercial_register_v002.pdf',
-      nationalIdFront: 'nid_front_v002.jpg',
-      nationalIdBack: 'nid_back_v002.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: 'www.elitecatering.com',
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v003',
-    vendorType: 'freelancer',
-    companyName: 'Golden Moments Photography',
-    ownerName: 'Tariq Haddad',
-    signatoryName: 'Tariq Haddad',
-    email: 'tariq@goldenmoments.jo',
-    phone: '+962 77 456 7890',
-    category: 'Photography & Videography',
-    city: 'Irbid',
-    registrationDate: '2026-05-15',
-    status: 'Pending',
-    about: 'Capturing your best moments with cinematic videography and high-res photography.',
-    avatar: 'https://i.pravatar.cc/150?img=33',
-    servicesCount: 4,
-    yearsInBusiness: 3,
-    iban: 'JO94CBJO0010000000000352000527',
-    ibanMasked: '•••• •••• •••• 0527',
-
-    documents: {
-      nationalIdFront: 'nid_front_v003.jpg',
-      nationalIdBack: 'nid_back_v003.jpg',
-    },
-    portfolioInstagram: '@tariq.moments',
-    portfolioWebsite: 'www.goldenmoments.jo',
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v004',
-    vendorType: 'freelancer',
-    companyName: 'Amman DJ Stars',
-    ownerName: 'Omar Ziad',
-    signatoryName: 'Omar Ziad',
-    email: 'omar.dj@ammanstars.com',
-    phone: '+962 79 111 2222',
-    category: 'Music & Entertainment',
-    city: 'Amman',
-    registrationDate: '2026-05-18',
-    status: 'Rejected',
-    about: 'Providing top-tier DJ services and sound systems for weddings and corporate events.',
-    avatar: 'https://i.pravatar.cc/150?img=15',
-    servicesCount: 2,
-    yearsInBusiness: 2,
-    iban: 'JO94CBJO0010000000000463000639',
-    ibanMasked: '•••• •••• •••• 0639',
-
-    documents: {
-      nationalIdFront: 'nid_front_v004.jpg',
-      nationalIdBack: 'nid_back_v004.jpg',
-    },
-    portfolioInstagram: '@omar.dj',
-    portfolioWebsite: null,
-    documentsStatus: 'rejected',
-  },
-  {
-    id: 'v005',
-    vendorType: 'company',
-    companyName: 'Diamond Events Decor',
-    ownerName: 'Lina Yassin',
-    signatoryName: 'Lina Yassin',
-    email: 'lina@diamondevents.jo',
-    phone: '+962 78 333 4444',
-    category: 'Decoration',
-    city: 'Zarqa',
-    registrationDate: '2026-05-19',
-    status: 'Pending',
-    about: 'Luxury floral arrangements and full hall decoration services.',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    servicesCount: 5,
-    yearsInBusiness: 7,
-    iban: 'JO94CBJO0010000000000574000741',
-    ibanMasked: '•••• •••• •••• 0741',
-
-    documents: {
-      commercialRegister: 'commercial_register_v005.pdf',
-      nationalIdFront: 'nid_front_v005.jpg',
-      nationalIdBack: 'nid_back_v005.jpg',
-    },
-    portfolioInstagram: '@diamond.decor.jo',
-    portfolioWebsite: null,
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v006',
-    vendorType: 'company',
-    companyName: 'The Grand Hall',
-    ownerName: 'Ahmad Nasser',
-    signatoryName: 'Ahmad Nasser',
-    email: 'ahmad@grandhall.com',
-    phone: '+962 79 555 6666',
-    category: 'Venue',
-    city: 'Amman',
-    registrationDate: '2026-05-20',
-    status: 'Approved',
-    about: 'A prestigious hall located in the heart of Amman.',
-    avatar: 'https://i.pravatar.cc/150?img=8',
-    servicesCount: 1,
-    yearsInBusiness: 10,
-    iban: 'JO94CBJO0010000000000685000852',
-    ibanMasked: '•••• •••• •••• 0852',
-
-    documents: {
-      commercialRegister: 'commercial_register_v006.pdf',
-      nationalIdFront: 'nid_front_v006.jpg',
-      nationalIdBack: 'nid_back_v006.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: 'www.grandhall.jo',
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v007',
-    vendorType: 'freelancer',
-    companyName: 'Zaffa Masters',
-    ownerName: 'Hassan Ali',
-    signatoryName: 'Hassan Ali',
-    email: 'hassan@zaffamasters.jo',
-    phone: '+962 77 777 8888',
-    category: 'Music & Entertainment',
-    city: 'Amman',
-    registrationDate: '2026-05-21',
-    status: 'Pending',
-    about: 'Traditional Zaffa group with a modern twist.',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    servicesCount: 3,
-    yearsInBusiness: 4,
-    iban: 'JO94CBJO0010000000000796000963',
-    ibanMasked: '•••• •••• •••• 0963',
-
-    documents: {
-      nationalIdFront: 'nid_front_v007.jpg',
-      nationalIdBack: 'nid_back_v007.jpg',
-    },
-    portfolioInstagram: '@zaffa.masters',
-    portfolioWebsite: null,
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v008',
-    vendorType: 'company',
-    companyName: 'Petra Lights & Sound',
-    ownerName: 'Majed Othman',
-    signatoryName: 'Majed Othman',
-    email: 'info@petralights.com',
-    phone: '+962 78 999 0000',
-    category: 'Music & Entertainment',
-    city: 'Aqaba',
-    registrationDate: '2026-05-22',
-    status: 'Approved',
-    about: 'Stage lighting and professional sound engineering.',
-    avatar: 'https://i.pravatar.cc/150?img=60',
-    servicesCount: 6,
-    yearsInBusiness: 8,
-    iban: 'JO94CBJO0010000000000907001074',
-    ibanMasked: '•••• •••• •••• 1074',
-
-    documents: {
-      commercialRegister: 'commercial_register_v008.pdf',
-      nationalIdFront: 'nid_front_v008.jpg',
-      nationalIdBack: 'nid_back_v008.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: 'www.petralights.com',
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v009',
-    vendorType: 'freelancer',
-    companyName: 'Sweet Tooth Bakery',
-    ownerName: 'Nour Kareem',
-    signatoryName: 'Nour Kareem',
-    email: 'nour@sweettooth.jo',
-    phone: '+962 79 222 3333',
-    category: 'Cakes & Desserts',
-    city: 'Amman',
-    registrationDate: '2026-05-22',
-    status: 'Approved',
-    about: 'Custom wedding cakes and dessert buffets.',
-    avatar: 'https://i.pravatar.cc/150?img=44',
-    servicesCount: 4,
-    yearsInBusiness: 6,
-    iban: 'JO94CBJO0010000000001018001185',
-    ibanMasked: '•••• •••• •••• 1185',
-
-    documents: {
-      nationalIdFront: 'nid_front_v009.jpg',
-      nationalIdBack: 'nid_back_v009.jpg',
-    },
-    portfolioInstagram: '@sweettooth.jo',
-    portfolioWebsite: null,
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v010',
-    vendorType: 'freelancer',
-    companyName: 'Flash Studios',
-    ownerName: 'Rami Suleiman',
-    signatoryName: 'Rami Suleiman',
-    email: 'rami@flashstudios.com',
-    phone: '+962 77 444 5555',
-    category: 'Photography & Videography',
-    city: 'Amman',
-    registrationDate: '2026-05-23',
-    status: 'Pending',
-    about: 'Modern photography studio with drone capabilities.',
-    avatar: 'https://i.pravatar.cc/150?img=59',
-    servicesCount: 2,
-    yearsInBusiness: 1,
-    iban: 'JO94CBJO0010000000001129001296',
-    ibanMasked: '•••• •••• •••• 1296',
-
-    documents: {
-      nationalIdFront: 'nid_front_v010.jpg',
-      nationalIdBack: 'nid_back_v010.jpg',
-    },
-    portfolioInstagram: '@flash.studios.jo',
-    portfolioWebsite: 'www.flashstudios.com',
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v011',
-    vendorType: 'company',
-    companyName: 'Magic Planners',
-    ownerName: 'Zeina Mahmoud',
-    signatoryName: 'Zeina Mahmoud',
-    email: 'zeina@magicplanners.jo',
-    phone: '+962 78 666 7777',
-    category: 'Decoration',
-    city: 'Amman',
-    registrationDate: '2026-05-24',
-    status: 'Approved',
-    about: 'Full-service event planning and decoration.',
-    avatar: 'https://i.pravatar.cc/150?img=32',
-    servicesCount: 10,
-    yearsInBusiness: 9,
-    iban: 'JO94CBJO0010000000001240001407',
-    ibanMasked: '•••• •••• •••• 1407',
-
-    documents: {
-      commercialRegister: 'commercial_register_v011.pdf',
-      nationalIdFront: 'nid_front_v011.jpg',
-      nationalIdBack: 'nid_back_v011.jpg',
-    },
-    portfolioInstagram: '@magic.planners',
-    portfolioWebsite: 'www.magicplanners.jo',
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v012',
-    vendorType: 'freelancer',
-    companyName: 'Classic Rides',
-    ownerName: 'Yousef Nabeel',
-    signatoryName: 'Yousef Nabeel',
-    email: 'yousef@classicrides.com',
-    phone: '+962 79 888 9999',
-    category: 'Transportation',
-    city: 'Amman',
-    registrationDate: '2026-05-24',
-    status: 'Rejected',
-    about: 'Vintage car rentals for weddings.',
-    avatar: 'https://i.pravatar.cc/150?img=53',
-    servicesCount: 1,
-    yearsInBusiness: 2,
-    iban: 'JO94CBJO0010000000001351001518',
-    ibanMasked: '•••• •••• •••• 1518',
-
-    documents: {
-      nationalIdFront: 'nid_front_v012.jpg',
-      nationalIdBack: 'nid_back_v012.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: null,
-    documentsStatus: 'rejected',
-  },
-  {
-    id: 'v013',
-    vendorType: 'company',
-    companyName: 'Al-Bustan Resort',
-    ownerName: 'Firas Jaber',
-    signatoryName: 'Firas Jaber',
-    email: 'firas@albustan.jo',
-    phone: '+962 77 111 2222',
-    category: 'Venue',
-    city: 'Jerash',
-    registrationDate: '2026-05-25',
-    status: 'Approved',
-    about: 'Beautiful outdoor resort venue surrounded by nature.',
-    avatar: 'https://i.pravatar.cc/150?img=13',
-    servicesCount: 2,
-    yearsInBusiness: 15,
-    iban: 'JO94CBJO0010000000001462001629',
-    ibanMasked: '•••• •••• •••• 1629',
-
-    documents: {
-      commercialRegister: 'commercial_register_v013.pdf',
-      nationalIdFront: 'nid_front_v013.jpg',
-      nationalIdBack: 'nid_back_v013.jpg',
-    },
-    portfolioInstagram: null,
-    portfolioWebsite: 'www.albustan.jo',
-    documentsStatus: 'verified',
-  },
-  {
-    id: 'v014',
-    vendorType: 'freelancer',
-    companyName: 'Taste of Home',
-    ownerName: 'Amal Saqer',
-    signatoryName: 'Amal Saqer',
-    email: 'amal@tasteofhome.com',
-    phone: '+962 78 333 4444',
-    category: 'Catering',
-    city: 'Amman',
-    registrationDate: '2026-05-25',
-    status: 'Pending',
-    about: 'Authentic homemade Jordanian dishes for events.',
-    avatar: 'https://i.pravatar.cc/150?img=49',
-    servicesCount: 3,
-    yearsInBusiness: 4,
-    iban: 'JO94CBJO0010000000001573001740',
-    ibanMasked: '•••• •••• •••• 1740',
-
-    documents: {
-      nationalIdFront: 'nid_front_v014.jpg',
-      nationalIdBack: 'nid_back_v014.jpg',
-    },
-    portfolioInstagram: '@tasteofhome.jo',
-    portfolioWebsite: null,
-    documentsStatus: 'submitted',
-  },
-  {
-    id: 'v015',
-    vendorType: 'freelancer',
-    companyName: 'Star Lens',
-    ownerName: 'Ibrahim Khawaja',
-    signatoryName: 'Ibrahim Khawaja',
-    email: 'ibrahim@starlens.jo',
-    phone: '+962 79 555 6666',
-    category: 'Photography & Videography',
-    city: 'Salt',
-    registrationDate: '2026-05-25',
-    status: 'Approved',
-    about: 'Professional wedding photography and albums.',
-    avatar: 'https://i.pravatar.cc/150?img=68',
-    servicesCount: 5,
-    yearsInBusiness: 6,
-    iban: 'JO94CBJO0010000000001684001851',
-    ibanMasked: '•••• •••• •••• 1851',
-
-    documents: {
-      nationalIdFront: 'nid_front_v015.jpg',
-      nationalIdBack: 'nid_back_v015.jpg',
-    },
-    portfolioInstagram: '@star.lens.jo',
-    portfolioWebsite: 'www.starlens.jo',
-    documentsStatus: 'verified',
-  },
-];
+// Removed mock data
 
 const TABS = ['All', 'Pending', 'Approved', 'Rejected', 'Updates Pending'];
 
@@ -466,11 +46,14 @@ function DocStatusBadge({ status }) {
   );
 }
 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getVendors, approveVendor, rejectVendor, getPlatformStats, getVendorById } from '../../services/admin.service';
+
 export default function AdminVendors() {
+  const queryClient = useQueryClient();
   const outletContext = useOutletContext();
   const isSidebarOpen = outletContext?.isSidebarOpen ?? true;
 
-  const [vendors, setVendors] = useState(MOCK_VENDORS);
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -481,57 +64,109 @@ export default function AdminVendors() {
     if (selectedVendor) setModalTab('overview');
   }, [selectedVendor?.id]);
 
-  const pendingCount  = vendors.filter(v => v.status === 'Pending').length;
-  const approvedCount = vendors.filter(v => v.status === 'Approved').length;
-  const rejectedCount = vendors.filter(v => v.status === 'Rejected').length;
-  const updatesPendingCount = vendors.filter(v => v.hasPendingChanges).length;
+  const mappedStatus = activeTab === 'All' || activeTab === 'Updates Pending' ? undefined : activeTab;
 
-  const filteredVendors = vendors.filter(v => {
-    const matchesTab = activeTab === 'All' 
-      || (activeTab === 'Updates Pending' ? v.hasPendingChanges : v.status === activeTab);
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      v.companyName.toLowerCase().includes(searchLower) ||
-      v.ownerName.toLowerCase().includes(searchLower) ||
-      v.email.toLowerCase().includes(searchLower);
-    return matchesTab && matchesSearch;
+  const { data: vendorsData, isLoading } = useQuery({
+    queryKey: ['admin-vendors', mappedStatus, searchTerm],
+    queryFn: () => getVendors({ 
+      status: mappedStatus ? mappedStatus.toLowerCase() : undefined,
+      search: searchTerm || undefined,
+      limit: 50 
+    })
   });
 
-  const handleApprove = (id) => {
-    setVendors(prev => prev.map(v => v.id === id ? { ...v, status: 'Approved', documentsStatus: 'verified' } : v));
-    if (selectedVendor?.id === id) setSelectedVendor(prev => ({ ...prev, status: 'Approved', documentsStatus: 'verified' }));
-    toastSuccess("Vendor approved and notified.");
-  };
+  const counts = vendorsData?.data?.counts || {};
+  const pendingCount = counts.pending || 0;
+  const approvedCount = counts.approved || 0;
+  const rejectedCount = counts.rejected || 0;
+  const updatesPendingCount = 0;
 
-  const handleReject = (id) => {
-    setVendors(prev => prev.map(v => v.id === id ? { ...v, status: 'Rejected', documentsStatus: 'rejected' } : v));
-    if (selectedVendor?.id === id) setSelectedVendor(prev => ({ ...prev, status: 'Rejected', documentsStatus: 'rejected' }));
-    toastError("Vendor application rejected.");
-  };
+  const rawVendors = vendorsData?.data?.vendors || [];
+  
+  const filteredVendors = rawVendors.map(v => ({
+    id: v.vendor_id,
+    vendorType: v.vendor_type || 'company',
+    companyName: v.companyname || v.ownername || 'N/A',
+    ownerName: v.ownername || 'N/A',
+    signatoryName: v.ownername || 'N/A',
+    email: v.email,
+    phone: v.phone || 'N/A',
+    category: v.category || 'General',
+    city: v.city || 'Amman',
+    registrationDate: v.registrationdate || v.created_at,
+    status: v.status ? v.status.charAt(0).toUpperCase() + v.status.slice(1) : 'Pending',
+    about: v.about || 'N/A',
+    avatar: v.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.ownername || 'Vendor')}&background=random`,
+    servicesCount: parseInt(v.servicescount) || 0,
+    yearsInBusiness: 1,
+    iban: v.iban || 'JO0000000000000000000000000000',
+    ibanMasked: v.ibanMasked || '•••• •••• •••• 0000',
+    hasPendingChanges: v.haspendingchanges || false,
+    documents: {},
+    portfolioInstagram: null,
+    portfolioWebsite: null,
+    documentsStatus: v.status === 'approved' ? 'verified' : v.status === 'rejected' ? 'rejected' : 'submitted',
+  }));
 
-  const handleRevoke = (id) => {
-    setVendors(prev => prev.map(v => v.id === id ? { ...v, status: 'Pending', documentsStatus: 'submitted' } : v));
-    if (selectedVendor?.id === id) setSelectedVendor(prev => ({ ...prev, status: 'Pending', documentsStatus: 'submitted' }));
-  };
+  const approveMutation = useMutation({
+    mutationFn: (id) => approveVendor(id),
+    onSuccess: () => {
+      toastSuccess("Vendor approved.");
+      queryClient.invalidateQueries({ queryKey: ['admin-vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setSelectedVendor(null);
+    },
+    onError: () => toastError("Failed to approve vendor.")
+  });
 
-  const handleApproveChanges = (id) => {
-    setVendors(prev => prev.map(v => {
-      if (v.id === id) {
-        return { ...v, ...v.pendingData, hasPendingChanges: false, pendingData: null };
-      }
-      return v;
-    }));
-    if (selectedVendor?.id === id) {
-      setSelectedVendor(prev => ({ ...prev, ...prev.pendingData, hasPendingChanges: false, pendingData: null }));
+  const rejectMutation = useMutation({
+    mutationFn: (id) => rejectVendor(id, "Rejected by admin"),
+    onSuccess: () => {
+      toastError("Vendor application rejected.");
+      queryClient.invalidateQueries({ queryKey: ['admin-vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setSelectedVendor(null);
+    },
+    onError: () => toastError("Failed to reject vendor.")
+  });
+
+  const handleApprove = (id) => approveMutation.mutate(id);
+  const handleReject = (id) => rejectMutation.mutate(id);
+  const handleRevoke = (id) => rejectMutation.mutate(id); // Revoking is treated as reject for now
+  
+  const handleApproveChanges = (id) => {}; // not fully supported in this simplified view yet
+  const handleRejectChanges = (id) => {};
+
+  const toggleIban = (id) => setShowIban(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Fetch detailed vendor data (documents, services, bookings) when a vendor is clicked
+  const { data: vendorDetailData, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['admin-vendor-detail', selectedVendor?.id],
+    queryFn: () => getVendorById(selectedVendor.id),
+    enabled: !!selectedVendor?.id,
+  });
+
+  // Calculate experience string
+  const getExperienceString = (dateString) => {
+    if (!dateString) return '< 1 year';
+    const regDate = new Date(dateString);
+    const now = new Date();
+    const diffMonths = (now.getFullYear() - regDate.getFullYear()) * 12 + (now.getMonth() - regDate.getMonth());
+    
+    if (diffMonths < 12) {
+      return '< 1 year';
+    } else {
+      const years = Math.floor(diffMonths / 12);
+      return `${years} ${years === 1 ? 'Year' : 'Years'}`;
     }
   };
 
-  const handleRejectChanges = (id) => {
-    setVendors(prev => prev.map(v => v.id === id ? { ...v, hasPendingChanges: false, pendingData: null } : v));
-    if (selectedVendor?.id === id) setSelectedVendor(prev => ({ ...prev, hasPendingChanges: false, pendingData: null }));
-  };
-
-  const toggleIban = (id) => setShowIban(prev => ({ ...prev, [id]: !prev[id] }));
+  // Merge the basic list data with the fetched detail data
+  const activeVendor = selectedVendor ? {
+    ...selectedVendor,
+    documents: vendorDetailData?.data?.documents || {},
+    experienceString: getExperienceString(selectedVendor.registrationDate)
+  } : null;
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -585,7 +220,7 @@ export default function AdminVendors() {
         <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
           <div className="flex gap-2 p-1 bg-[#1A1D27] border border-[#2A2D3A] rounded-xl overflow-x-auto max-w-full">
             {TABS.map(tab => {
-              const count = tab === 'All' ? vendors.length :
+              const count = tab === 'All' ? (pendingCount + approvedCount + rejectedCount) :
                             tab === 'Pending' ? pendingCount :
                             tab === 'Approved' ? approvedCount : 
                             tab === 'Updates Pending' ? updatesPendingCount : rejectedCount;
@@ -639,7 +274,13 @@ export default function AdminVendors() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2A2D3A]">
-                {filteredVendors.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-[#8B8FA8]">
+                      Loading vendors...
+                    </td>
+                  </tr>
+                ) : filteredVendors.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-[#8B8FA8]">
                       No vendors found matching your criteria.
@@ -708,23 +349,23 @@ export default function AdminVendors() {
                           
                           {vendor.status === 'Pending' && (
                             <>
-                              <button onClick={() => handleApprove(vendor.id)} className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] bg-emerald-500 hover:bg-emerald-400 text-[#0F1117] text-xs font-bold rounded-lg transition-colors">
+                              <button onClick={() => handleApprove(vendor.id)} disabled={approveMutation.isPending} className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] bg-emerald-500 hover:bg-emerald-400 text-[#0F1117] text-xs font-bold rounded-lg transition-colors">
                                 <Check size={14} /> Approve
                               </button>
-                              <button onClick={() => handleReject(vendor.id)} className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-lg transition-colors">
+                              <button onClick={() => handleReject(vendor.id)} disabled={rejectMutation.isPending} className="flex items-center gap-1 px-3 py-1.5 min-h-[44px] bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-lg transition-colors">
                                 <CloseIcon size={14} /> Reject
                               </button>
                             </>
                           )}
 
                           {vendor.status === 'Approved' && (
-                            <button onClick={() => handleRevoke(vendor.id)} className="flex items-center gap-1 px-3 py-1.5 border border-red-500/50 hover:bg-red-500/10 text-red-400 text-xs font-bold rounded-lg transition-colors">
+                            <button onClick={() => handleRevoke(vendor.id)} disabled={rejectMutation.isPending} className="flex items-center gap-1 px-3 py-1.5 border border-red-500/50 hover:bg-red-500/10 text-red-400 text-xs font-bold rounded-lg transition-colors">
                               Revoke
                             </button>
                           )}
 
                           {vendor.status === 'Rejected' && (
-                            <button onClick={() => handleRevoke(vendor.id)} className="flex items-center gap-1 px-3 py-1.5 border border-emerald-500/50 hover:bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-lg transition-colors">
+                            <button onClick={() => handleApprove(vendor.id)} disabled={approveMutation.isPending} className="flex items-center gap-1 px-3 py-1.5 border border-emerald-500/50 hover:bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-lg transition-colors">
                               Re-approve
                             </button>
                           )}
@@ -748,7 +389,7 @@ export default function AdminVendors() {
       </PageTransition>
 
       {/* ══ SECTION 4: VENDOR DETAIL MODAL ══ */}
-      {selectedVendor && (
+      {activeVendor && (
         <>
           {/* ── Animation keyframe injected inline ── */}
           <style>{`
@@ -791,45 +432,45 @@ export default function AdminVendors() {
                 {/* Top row: avatar + text stack */}
                 <div className="flex items-start gap-5 mb-5">
                   <img
-                    src={selectedVendor.avatar}
+                    src={activeVendor.avatar}
                     alt=""
                     className="w-20 h-20 rounded-2xl object-cover border-2 border-[var(--color-gold)] shadow-[0_0_0_4px_rgba(201,162,77,0.15)] shrink-0"
                   />
                   <div className="flex flex-col gap-1.5 min-w-0 pt-1">
                     <h2 className="text-xl font-extrabold text-white leading-tight truncate pr-10">
-                      {selectedVendor.companyName}
+                      {activeVendor.companyName}
                     </h2>
                     <p className="text-sm font-semibold text-[var(--color-gold)]">
-                      {selectedVendor.ownerName}
+                      {activeVendor.ownerName}
                     </p>
                     <p className="text-xs text-[#8B8FA8] flex items-center gap-1.5">
                       <Calendar size={12} className="shrink-0" />
-                      Since {selectedVendor.registrationDate}
+                      Since {new Date(activeVendor.registrationDate).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
                 {/* Badges row */}
                 <div className="flex flex-wrap gap-2 mb-5">
-                  <VendorTypeBadge type={selectedVendor.vendorType} />
+                  <VendorTypeBadge type={activeVendor.vendorType} />
 
-                  {selectedVendor.status === 'Pending' && (
+                  {activeVendor.status === 'Pending' && (
                     <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/25 px-3 py-1 rounded-full text-xs font-bold">
                       <ShieldAlert size={12} /> Pending Approval
                     </span>
                   )}
-                  {selectedVendor.status === 'Approved' && (
+                  {activeVendor.status === 'Approved' && (
                     <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full text-xs font-bold">
                       <ShieldCheck size={12} /> Verified Vendor
                     </span>
                   )}
-                  {selectedVendor.status === 'Rejected' && (
+                  {activeVendor.status === 'Rejected' && (
                     <span className="flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/25 px-3 py-1 rounded-full text-xs font-bold">
                       <CloseIcon size={12} /> Application Rejected
                     </span>
                   )}
 
-                  <DocStatusBadge status={selectedVendor.documentsStatus} />
+                  <DocStatusBadge status={activeVendor.documentsStatus} />
                 </div>
 
                 {/* Tab strip */}
@@ -895,31 +536,31 @@ export default function AdminVendors() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Category</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.category}</p>
+                        <p className="text-sm font-semibold text-white">{activeVendor.category}</p>
                       </div>
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">City</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.city}</p>
+                        <p className="text-sm font-semibold text-white">{activeVendor.city}</p>
                       </div>
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Phone</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.phone}</p>
+                        <p className="text-sm font-semibold text-white">{activeVendor.phone}</p>
                       </div>
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Experience</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.yearsInBusiness} Years</p>
+                        <p className="text-sm font-semibold text-white">{activeVendor.experienceString}</p>
                       </div>
                       <div className="col-span-2 bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Email</p>
-                        <p className="text-sm font-semibold text-white break-all">{selectedVendor.email}</p>
+                        <p className="text-sm font-semibold text-white break-all">{activeVendor.email}</p>
                       </div>
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Services Listed</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.servicesCount}</p>
+                        <p className="text-sm font-semibold text-white">{activeVendor.servicesCount}</p>
                       </div>
                       <div className="bg-[#1A1D27] rounded-2xl p-4 border border-[#2A2D3A]">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-1.5">Vendor Since</p>
-                        <p className="text-sm font-semibold text-white">{selectedVendor.registrationDate}</p>
+                        <p className="text-sm font-semibold text-white">{new Date(activeVendor.registrationDate).toLocaleDateString()}</p>
                       </div>
                     </div>
 
@@ -928,7 +569,7 @@ export default function AdminVendors() {
                       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8] mb-3 flex items-center gap-2">
                         <FileText size={12} className="text-[var(--color-gold)]" /> About
                       </p>
-                      <p className="text-sm text-[#C8C9D0] leading-relaxed">{selectedVendor.about}</p>
+                      <p className="text-sm text-[#C8C9D0] leading-relaxed">{activeVendor.about}</p>
                     </div>
                   </>
                 )}
@@ -939,50 +580,56 @@ export default function AdminVendors() {
                     <div className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                       <FileText size={15} className="text-[var(--color-gold)]" />
                       Submitted Documents
-                      <DocStatusBadge status={selectedVendor.documentsStatus} />
+                      <DocStatusBadge status={activeVendor.documentsStatus} />
                     </div>
 
-                    {!selectedVendor.documents.commercialRegister && !selectedVendor.documents.nationalIdFront ? (
+                    {isLoadingDetail ? (
+                      <div className="text-center py-8 text-[#8B8FA8] text-sm animate-pulse">
+                        Loading documents...
+                      </div>
+                    ) : !activeVendor.documents.commercialRegister && !activeVendor.documents.nationalIdFront ? (
                       <div className="text-center py-8 text-[#8B8FA8] text-sm">
                         No documents submitted yet
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {/* Commercial Register */}
-                        {selectedVendor.documents.commercialRegister && (
-                          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-blue-500/40 transition-colors cursor-pointer">
+                        {activeVendor.documents.commercialRegister && (
+                          <a href={activeVendor.documents.commercialRegister} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-blue-500/40 transition-colors cursor-pointer group block">
                             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                              <FileText size={18} className="text-blue-400" />
+                              <FileText size={18} className="text-blue-400 group-hover:scale-110 transition-transform" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-white">Commercial Register</p>
-                              <p className="text-xs text-[#8B8FA8] mt-0.5 truncate">{selectedVendor.documents.commercialRegister}</p>
+                              <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Commercial Register</p>
+                              <p className="text-xs text-[#8B8FA8] mt-0.5 truncate">{activeVendor.documents.commercialRegister}</p>
                             </div>
-                            <span className="text-xs font-bold text-[var(--color-gold)] shrink-0">View →</span>
-                          </div>
+                            <span className="text-xs font-bold text-[var(--color-gold)] shrink-0 group-hover:translate-x-1 transition-transform">View →</span>
+                          </a>
                         )}
 
                         {/* National ID — side by side */}
-                        {selectedVendor.documents.nationalIdFront && (
+                        {activeVendor.documents.nationalIdFront && (
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-purple-500/40 transition-colors cursor-pointer">
+                            <a href={activeVendor.documents.nationalIdFront} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-purple-500/40 transition-colors cursor-pointer group block">
                               <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-                                <IdCard size={18} className="text-purple-400" />
+                                <IdCard size={18} className="text-purple-400 group-hover:scale-110 transition-transform" />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-white">NID Front</p>
-                                <p className="text-xs text-[#8B8FA8] mt-0.5">View →</p>
+                                <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">NID Front</p>
+                                <p className="text-xs text-[#8B8FA8] mt-0.5 group-hover:translate-x-1 transition-transform">View →</p>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-purple-500/40 transition-colors cursor-pointer">
-                              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-                                <IdCard size={18} className="text-purple-400" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-white">NID Back</p>
-                                <p className="text-xs text-[#8B8FA8] mt-0.5">View →</p>
-                              </div>
-                            </div>
+                            </a>
+                            {activeVendor.documents.nationalIdBack && (
+                              <a href={activeVendor.documents.nationalIdBack} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-purple-500/40 transition-colors cursor-pointer group block">
+                                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                                  <IdCard size={18} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">NID Back</p>
+                                  <p className="text-xs text-[#8B8FA8] mt-0.5 group-hover:translate-x-1 transition-transform">View →</p>
+                                </div>
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>
@@ -998,20 +645,20 @@ export default function AdminVendors() {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8B8FA8]">IBAN</p>
                         <button
-                          onClick={() => toggleIban(selectedVendor.id)}
+                          onClick={() => toggleIban(activeVendor.id)}
                           className="text-[10px] text-[var(--color-gold)] hover:underline flex items-center gap-1"
                         >
-                          {showIban[selectedVendor.id]
+                          {showIban[activeVendor.id]
                             ? <><EyeOff size={11} /> Hide</>
                             : <><Eye size={11} /> Reveal</>}
                         </button>
                       </div>
                       <p className="text-base font-bold text-white font-mono tracking-wider break-all">
-                        {showIban[selectedVendor.id] ? selectedVendor.iban : selectedVendor.ibanMasked}
+                        {showIban[activeVendor.id] ? activeVendor.iban : activeVendor.ibanMasked}
                       </p>
                       <p className="text-xs text-[#8B8FA8] mt-2">
                         Account holder:{' '}
-                        <span className="text-white font-semibold">{selectedVendor.signatoryName}</span>
+                        <span className="text-white font-semibold">{activeVendor.signatoryName}</span>
                       </p>
                     </div>
 
@@ -1064,13 +711,13 @@ export default function AdminVendors() {
                         )}
 
                         {/* Website card */}
-                        {selectedVendor.portfolioWebsite && (
+                        {activeVendor.portfolioWebsite && (
                           <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1A1D27] border border-[#2A2D3A] hover:border-blue-500/30 transition-colors">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center shrink-0">
                               <Globe size={18} className="text-blue-400" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-white truncate">{selectedVendor.portfolioWebsite}</p>
+                              <p className="text-sm font-semibold text-white truncate">{activeVendor.portfolioWebsite}</p>
                               <p className="text-xs text-[#8B8FA8] mt-0.5">Website</p>
                             </div>
                           </div>
@@ -1084,42 +731,46 @@ export default function AdminVendors() {
 
               {/* ════ PART 3: STICKY FOOTER (shrink-0) ════ */}
               <div className="shrink-0 px-6 py-4 border-t border-[#2A2D3A] bg-[#0F1117]">
-                {selectedVendor.status === 'Pending' && (
+                {activeVendor.status === 'Pending' && (
                   <div className="flex gap-3">
                     <button
-                      onClick={() => handleApprove(selectedVendor.id)}
-                      className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#0F1117] font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+                      onClick={() => handleApprove(activeVendor.id)}
+                      disabled={approveMutation.isPending}
+                      className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#0F1117] font-extrabold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                     >
                       <Check size={16} /> Approve
                     </button>
                     <button
-                      onClick={() => handleReject(selectedVendor.id)}
-                      className="flex-1 py-3 rounded-xl border border-red-500/40 hover:bg-red-500/10 text-red-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                      onClick={() => handleReject(activeVendor.id)}
+                      disabled={rejectMutation.isPending}
+                      className="flex-1 py-3 rounded-xl border border-red-500/40 hover:bg-red-500/10 text-red-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                     >
                       <CloseIcon size={16} /> Reject
                     </button>
                   </div>
                 )}
-                {selectedVendor.status === 'Approved' && (
+                {activeVendor.status === 'Approved' && (
                   <button
-                    onClick={() => handleRevoke(selectedVendor.id)}
-                    className="w-full py-3 rounded-xl border border-red-500/40 hover:bg-red-500/10 text-red-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                    onClick={() => handleRevoke(activeVendor.id)}
+                    disabled={rejectMutation.isPending}
+                    className="w-full py-3 rounded-xl border border-red-500/40 hover:bg-red-500/10 text-red-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                   >
                     <CloseIcon size={16} /> Revoke Approval
                   </button>
                 )}
-                {selectedVendor.status === 'Rejected' && (
+                {activeVendor.status === 'Rejected' && (
                   <button
-                    onClick={() => handleRevoke(selectedVendor.id)}
-                    className="w-full py-3 rounded-xl border border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                    onClick={() => handleApprove(activeVendor.id)}
+                    disabled={approveMutation.isPending}
+                    className="w-full py-3 rounded-xl border border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                   >
                     <Check size={16} /> Re-approve Vendor
                   </button>
                 )}
                 <p className="text-center text-xs text-[#8B8FA8] mt-2">
-                  {selectedVendor.status === 'Pending' && 'Approving will notify the vendor by email and grant platform access.'}
-                  {selectedVendor.status === 'Approved' && "Revoking will suspend the vendor's listings immediately."}
-                  {selectedVendor.status === 'Rejected' && "Re-approving will restore the vendor's full platform access."}
+                  {activeVendor.status === 'Pending' && 'Approving will notify the vendor by email and grant platform access.'}
+                  {activeVendor.status === 'Approved' && "Revoking will suspend the vendor's listings immediately."}
+                  {activeVendor.status === 'Rejected' && "Re-approving will restore the vendor's full platform access."}
                 </p>
               </div>
 

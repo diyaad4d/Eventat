@@ -7,47 +7,37 @@ import {
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Pie, Cell,
-  LineChart, Line
+  LineChart, Line, ComposedChart
 } from 'recharts';
 
-// ─────────────────────────────────────────────────────────────
-//  MOCK DATA
-// ─────────────────────────────────────────────────────────────
-
-const REVENUE_DATA = [
-  { month: 'Jan', revenue: 15000, bookings: 450 },
-  { month: 'Feb', revenue: 22000, bookings: 520 },
-  { month: 'Mar', revenue: 18000, bookings: 490 },
-  { month: 'Apr', revenue: 28000, bookings: 710 },
-  { month: 'May', revenue: 35000, bookings: 890 },
-  { month: 'Jun', revenue: 42000, bookings: 1050 },
-  { month: 'Jul', revenue: 51000, bookings: 1200 },
-];
-
-const PLATFORM_SPLIT = [
-  { name: 'Vendor Subscriptions', value: 35000 },
-  { name: 'Booking Commission', value: 120000 },
-  { name: 'Featured Listings', value: 15000 },
-];
-const COLORS = ['#6366f1', '#C9A24D', '#10b981'];
-
-const TOP_VENDORS = [
-  { id: 1, name: 'Royal Gardens Venue', category: 'Venue', revenue: 15400, growth: 12 },
-  { id: 2, name: 'Elite Catering', category: 'Catering', revenue: 12100, growth: 8 },
-  { id: 3, name: 'Golden Moments', category: 'Photography', revenue: 9800, growth: -2 },
-  { id: 4, name: 'Magic Planners', category: 'Decoration', revenue: 7600, growth: 15 },
-];
-
-const LOCATION_DATA = [
-  { city: 'Amman', bookings: 3450 },
-  { city: 'Irbid', bookings: 850 },
-  { city: 'Zarqa', bookings: 620 },
-  { city: 'Aqaba', bookings: 410 },
-  { city: 'Dead Sea', bookings: 380 },
-];
+import { useQuery } from '@tanstack/react-query';
+import { getAdminAnalytics } from '../../services/admin.service';
 
 export default function AdminAnalytics() {
   const [timeRange, setTimeRange] = useState('6M');
+
+  const { data: analyticsRes, isLoading } = useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: getAdminAnalytics,
+  });
+
+  const analytics = analyticsRes?.data || {
+    monthlyData: [],
+    categoryRevenue: [],
+    locationData: [],
+    topVendors: [],
+    kpis: { totalRevenue: 0, totalBookings: 0, avgBookingValue: 0 }
+  };
+
+  const COLORS = ['#6366f1', '#C9A24D', '#10b981', '#f43f5e', '#a855f7', '#06b6d4', '#eab308'];
+  
+  // Format category revenue to match the expected format for pie chart
+  const platformSplit = analytics.categoryRevenue.map(cat => ({
+    name: cat.name,
+    value: cat.revenue || 0
+  })).filter(cat => cat.value > 0);
+
+  const totalRevenueAllCats = platformSplit.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="min-h-screen bg-[#0F1117] p-6 lg:p-8 font-sans">
@@ -87,12 +77,11 @@ export default function AdminAnalytics() {
         </div>
 
         {/* ══ KPI ROW ══ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {[
-            { label: 'Total Revenue', value: '211,000 JOD', trend: '+14.5%', isUp: true, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-            { label: 'Platform Bookings', value: '4,820', trend: '+22.1%', isUp: true, icon: Calendar, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-            { label: 'Avg Booking Value', value: '840 JOD', trend: '-2.4%', isUp: false, icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-            { label: 'Active Services', value: '1,245', trend: '+8.2%', isUp: true, icon: Layers, color: 'text-[var(--color-gold)]', bg: 'bg-[#C9A24D]/15' },
+            { label: 'Total Revenue', value: `${analytics.kpis.totalRevenue.toLocaleString()} JOD`, trend: '+0%', isUp: true, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+            { label: 'Platform Bookings', value: analytics.kpis.totalBookings.toLocaleString(), trend: '+0%', isUp: true, icon: Calendar, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+            { label: 'Avg Booking Value', value: `${analytics.kpis.avgBookingValue.toLocaleString()} JOD`, trend: '0%', isUp: true, icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-500/10' },
           ].map((stat, i) => (
             <div key={i} className="bg-[#1A1D27] border border-[#2A2D3A] rounded-2xl p-6 flex flex-col gap-4">
               <div className="flex items-start justify-between">
@@ -105,7 +94,7 @@ export default function AdminAnalytics() {
               </div>
               <div>
                 <p className="text-sm font-medium text-[#8B8FA8] mb-1">{stat.label}</p>
-                <p className="text-3xl font-black text-white">{stat.value}</p>
+                <p className="text-3xl font-black text-white">{isLoading ? '...' : stat.value}</p>
               </div>
             </div>
           ))}
@@ -124,7 +113,7 @@ export default function AdminAnalytics() {
             </div>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <ComposedChart data={analytics.monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#C9A24D" stopOpacity={0.3}/>
@@ -132,17 +121,16 @@ export default function AdminAnalytics() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2A2D3A" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8B8FA8' }} dy={10} />
-                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8B8FA8' }} />
-                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8B8FA8' }} />
-                  <Tooltip
+                  <XAxis dataKey="month" stroke="#8B8FA8" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" stroke="#8B8FA8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `JD${val}`} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#8B8FA8" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip 
                     contentStyle={{ backgroundColor: '#1A1D27', borderColor: '#2A2D3A', borderRadius: '8px', color: '#FFF' }}
                     itemStyle={{ color: '#FFF' }}
                   />
-                  <Legend verticalAlign="top" height={36} iconType="circle" />
                   <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue (JOD)" stroke="#C9A24D" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                   <Line yAxisId="right" type="monotone" dataKey="bookings" name="Bookings" stroke="#6366f1" strokeWidth={3} dot={false} />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -157,7 +145,7 @@ export default function AdminAnalytics() {
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
-                    data={PLATFORM_SPLIT}
+                    data={platformSplit.length ? platformSplit : [{ name: 'None', value: 1 }]}
                     cx="50%" cy="50%"
                     innerRadius={60}
                     outerRadius={80}
@@ -165,9 +153,11 @@ export default function AdminAnalytics() {
                     dataKey="value"
                     stroke="none"
                   >
-                    {PLATFORM_SPLIT.map((entry, index) => (
+                    {platformSplit.length ? platformSplit.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                    )) : (
+                      <Cell fill="#2A2D3A" />
+                    )}
                   </Pie>
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1A1D27', borderColor: '#2A2D3A', borderRadius: '8px', color: '#FFF' }}
@@ -178,11 +168,11 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-xs text-[#8B8FA8] font-bold uppercase tracking-wider">Total</span>
-                <span className="text-xl font-black text-white">170k</span>
+                <span className="text-xl font-black text-white">{totalRevenueAllCats >= 1000 ? `${(totalRevenueAllCats/1000).toFixed(1)}k` : totalRevenueAllCats}</span>
               </div>
             </div>
             <div className="flex flex-col gap-3 mt-4 flex-1 justify-end">
-              {PLATFORM_SPLIT.map((item, i) => (
+              {platformSplit.map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }} />
@@ -215,16 +205,20 @@ export default function AdminAnalytics() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2A2D3A]">
-                  {TOP_VENDORS.map((v) => (
-                    <tr key={v.id} className="hover:bg-[#2A2D3A]/20 transition-colors">
+                  {isLoading ? (
+                    <tr><td colSpan={4} className="p-4 text-center text-[#8B8FA8]">Loading vendors...</td></tr>
+                  ) : analytics.topVendors.length === 0 ? (
+                    <tr><td colSpan={4} className="p-4 text-center text-[#8B8FA8]">No data available.</td></tr>
+                  ) : analytics.topVendors.map((v, i) => (
+                    <tr key={i} className="hover:bg-[#2A2D3A]/20 transition-colors">
                       <td className="p-4 pl-6 text-sm font-bold text-white">{v.name}</td>
                       <td className="p-4 text-xs font-semibold text-[#8B8FA8]">{v.category}</td>
                       <td className="p-4 text-sm font-bold text-[var(--color-gold)]">{v.revenue.toLocaleString()} JOD</td>
                       <td className="p-4 pr-6 text-right">
                         <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${
-                          v.growth > 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'
+                          v.growth > 0 ? 'text-emerald-400 bg-emerald-500/10' : v.growth < 0 ? 'text-red-400 bg-red-500/10' : 'text-[#8B8FA8] bg-[#2A2D3A]'
                         }`}>
-                          {v.growth > 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                          {v.growth > 0 ? <ArrowUpRight size={12} /> : v.growth < 0 ? <ArrowDownRight size={12} /> : null}
                           {Math.abs(v.growth)}%
                         </span>
                       </td>
@@ -243,7 +237,7 @@ export default function AdminAnalytics() {
             </div>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={LOCATION_DATA} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <BarChart data={analytics.locationData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2A2D3A" />
                   <XAxis dataKey="city" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8B8FA8' }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8B8FA8' }} />

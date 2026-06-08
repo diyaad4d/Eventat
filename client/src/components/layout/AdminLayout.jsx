@@ -9,14 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../../store/authStore';
 import { getUnreadCount } from '../../services/notifications.service';
 
-const ADMIN_NAV = [
-  { to: '/admin/dashboard',   icon: <LayoutDashboard size={18}/>, label: 'Overview'    },
-  { to: '/admin/vendors',     icon: <Briefcase size={18}/>,       label: 'Vendors',    badge: 4 },
-  { to: '/admin/users',       icon: <Users size={18}/>,           label: 'Users'       },
-  { to: '/admin/categories',  icon: <Tag size={18}/>,             label: 'Categories'  },
-  { to: '/admin/analytics',   icon: <BarChart2 size={18}/>,       label: 'Analytics'   },
-  { to: '/admin/notifications', icon: <Bell size={18}/>,          label: 'Notifications', badge: 3 },
-];
+// ADMIN_NAV is generated dynamically inside the component
 
 function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -32,6 +25,26 @@ function AdminLayout({ children }) {
     refetchInterval: 1000 * 30,
     refetchIntervalInBackground: false,
   });
+
+  // ── Admin stats for Pending Vendors badge ──
+  const { data: statsData } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: () => import('../../services/admin.service').then(m => m.getPlatformStats()),
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 2,
+    refetchInterval: 1000 * 60 * 5,
+  });
+  
+  const pendingVendors = statsData?.data?.stats?.pendingVendors || 0;
+
+  const ADMIN_NAV = [
+    { to: '/admin/dashboard',   icon: <LayoutDashboard size={18}/>, label: 'Overview' },
+    { to: '/admin/vendors',     icon: <Briefcase size={18}/>,       label: 'Vendors',    badge: pendingVendors > 0 ? pendingVendors : null },
+    { to: '/admin/users',       icon: <Users size={18}/>,           label: 'Users' },
+    { to: '/admin/categories',  icon: <Tag size={18}/>,             label: 'Categories' },
+    { to: '/admin/analytics',   icon: <BarChart2 size={18}/>,       label: 'Analytics' },
+    { to: '/admin/notifications', icon: <Bell size={18}/>,          label: 'Notifications', badge: unreadCount > 0 ? unreadCount : null },
+  ];
 
   const handleLogout = () => {
     logout();

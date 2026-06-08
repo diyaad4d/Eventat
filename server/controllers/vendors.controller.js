@@ -172,6 +172,17 @@ const getMyServices = async (req, res, next) => {
         (SELECT COUNT(*) FROM event_plan_items epi
          WHERE epi.service_id = s.service_id
            AND epi.vendor_item_status = 'accepted') AS confirmed_bookings,
+        (SELECT json_agg(
+            json_build_object(
+              'event_type_id', et.event_type_id,
+              'name', et.name,
+              'slug', et.slug
+            )
+          )
+          FROM service_event_types set2
+          JOIN event_types et ON set2.event_type_id = et.event_type_id
+          WHERE set2.service_id = s.service_id
+        ) AS event_types,
         COUNT(*) OVER() AS total_count
       FROM services s
       LEFT JOIN categories   c  ON s.category_id    = c.category_id
@@ -209,7 +220,7 @@ const createService = async (req, res, next) => {
 
     const {
       title, description, base_price, pricing_unit,
-      category_id, subcategory_id, city, capacity, service_location,
+      category_id, subcategory_id, city, capacity, service_location, event_types
     } = req.body;
 
     // Step 1: Verify vendor is approved
@@ -268,10 +279,34 @@ const createService = async (req, res, next) => {
       ]
     );
 
+    const newService = result.rows[0];
+
+    // Step 5: Insert event types (if provided)
+    if (Array.isArray(event_types) && event_types.length > 0) {
+      // Build multiple value inserts
+      const valuePairs = event_types.map((_, idx) => `($1, $${idx + 2})`).join(', ');
+      const params = [newService.service_id, ...event_types];
+      await db.query(
+        `INSERT INTO service_event_types (service_id, event_type_id) VALUES ${valuePairs} ON CONFLICT DO NOTHING`,
+        params
+      );
+      
+      const etRes = await db.query(
+        `SELECT et.event_type_id, et.name, et.slug 
+         FROM service_event_types set2
+         JOIN event_types et ON set2.event_type_id = et.event_type_id
+         WHERE set2.service_id = $1`,
+        [newService.service_id]
+      );
+      newService.event_types = etRes.rows;
+    } else {
+      newService.event_types = [];
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Service created successfully.',
-      data: { service: result.rows[0] },
+      data: { service: newService },
     });
   } catch (err) {
     next(err);
@@ -336,24 +371,50 @@ const updateService = async (req, res, next) => {
       }
     }
 
-    if (updates.length === 0) {
+    let updatedService = existing;
+
+    if (updates.length > 0) {
+      params.push(serviceId);
+      const sql = `
+        UPDATE services
+        SET ${updates.join(', ')}, updated_at = NOW()
+        WHERE service_id = $${params.length}
+        RETURNING *
+      `;
+      const result = await db.query(sql, params);
+      updatedService = result.rows[0];
+    } else if (req.body.event_types === undefined) {
       return res.status(400).json({ success: false, error: 'No valid fields provided to update.' });
     }
 
-    params.push(serviceId);
-    const sql = `
-      UPDATE services
-      SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE service_id = $${params.length}
-      RETURNING *
-    `;
-
-    const result = await db.query(sql, params);
+    // Step 5: Update event_types if provided
+    if (req.body.event_types !== undefined) {
+      await db.query(`DELETE FROM service_event_types WHERE service_id = $1`, [serviceId]);
+      
+      const event_types = req.body.event_types;
+      if (Array.isArray(event_types) && event_types.length > 0) {
+        const valuePairs = event_types.map((_, idx) => `($1, $${idx + 2})`).join(', ');
+        const etParams = [serviceId, ...event_types];
+        await db.query(
+          `INSERT INTO service_event_types (service_id, event_type_id) VALUES ${valuePairs} ON CONFLICT DO NOTHING`,
+          etParams
+        );
+      }
+      
+      const etRes = await db.query(
+        `SELECT et.event_type_id, et.name, et.slug 
+         FROM service_event_types set2
+         JOIN event_types et ON set2.event_type_id = et.event_type_id
+         WHERE set2.service_id = $1`,
+        [serviceId]
+      );
+      updatedService.event_types = etRes.rows;
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Service updated.',
-      data: { service: result.rows[0] },
+      data: { service: updatedService },
     });
   } catch (err) {
     next(err);

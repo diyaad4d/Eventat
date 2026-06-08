@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import vendorService from '../../services/vendor.service';
+import { getUnreadCount } from '../../services/notifications.service';
 import Navbar from './Navbar';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
@@ -90,6 +91,14 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
     refetchInterval: 1000 * 60 * 2, // poll every 2 minutes
   });
 
+  const { data: unreadNotifCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: getUnreadCount,
+    enabled: !!user,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 30,
+  });
+
   const SidebarLink = ({ item }) => {
     const badgeCount = item.badge === 'cart' ? cartCount : 0;
 
@@ -135,12 +144,12 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
             )}
             
-            {item.label === 'Notifications' && !collapsed && (
+            {item.label === 'Notifications' && unreadNotifCount > 0 && !collapsed && (
               <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black px-1.5">
-                3
+                {unreadNotifCount}
               </span>
             )}
-            {item.label === 'Notifications' && collapsed && (
+            {item.label === 'Notifications' && unreadNotifCount > 0 && collapsed && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
             )}
 

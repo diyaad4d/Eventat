@@ -59,7 +59,7 @@ export const EVENT_TYPE_CONFIG = {
       { name: 'Music & Entertainment', slug: 'music-entertainment', icon: '🎵' },
     ],
   },
-  'milestone-birthdays': {
+  'birthday': {
     label:       'Milestone Birthdays',
     emoji:       '🎂',
     color:       '#C084FC',
@@ -118,6 +118,6 @@ export const EVENT_TYPE_CONFIG = {
 export const EVENT_TYPE_ORDER = [
   'wedding',
   'graduation',
-  'milestone-birthdays',
+  'birthday',
   'corporate',
 ];

@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/auth.controller');
 const validate = require('../middleware/validate.middleware');
 const authMiddleware = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload.middleware');
 
 const router = express.Router();
 
@@ -27,6 +28,11 @@ const registerLimiter = rateLimit({
 
 router.post('/register', 
   registerLimiter,
+  upload.fields([
+    { name: 'commercialRegister', maxCount: 1 },
+    { name: 'nationalIdFront', maxCount: 1 },
+    { name: 'nationalIdBack', maxCount: 1 }
+  ]),
   [
     body('email')
       .isEmail().withMessage('Valid email is required')

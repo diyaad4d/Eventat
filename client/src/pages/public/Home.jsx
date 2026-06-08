@@ -20,7 +20,7 @@ const EVENT_TYPES = [
   { value: '', label: 'All Events' },
   { value: 'wedding', label: '💍 Wedding' },
   { value: 'graduation', label: '🎓 Graduation' },
-  { value: 'milestone-birthdays', label: '🎂 Milestone Birthdays' },
+  { value: 'birthday', label: '🎂 Milestone Birthdays' },
   { value: 'corporate', label: '💼 Corporate' },
   { value: 'general', label: '🎉 General' },
 ];
@@ -193,10 +193,10 @@ function Home() {
   const handleSearch = (e) => {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (eventType) params.set('type', eventType);
-    if (keyword) params.set('q', keyword.trim());
+    if (eventType) params.set('eventType', eventType);
+    if (keyword) params.set('keyword', keyword.trim());
     if (date) params.set('date', date);
-    navigate(`/services${params.toString() ? `?${params}` : ''}`);
+    navigate(`/services${params.toString() ? `?${params}` : ''}#all-services`);
   };
 
   return (

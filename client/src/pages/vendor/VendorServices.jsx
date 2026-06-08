@@ -288,7 +288,7 @@ function VendorServices() {
                       <td className="p-4 pr-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            to={`/services/${srv.service_id}`}
+                            to={`/service/${srv.service_id}`}
                             target="_blank"
                             className="w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             title="Preview Service"

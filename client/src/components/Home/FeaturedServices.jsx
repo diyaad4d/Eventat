@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import ServiceCard from './ServiceCard';
+import { getFeaturedServices } from '../../services/services.service';
 
 // ─────────────────────────────────────────────────────────────
 //  Mock data — 8 top-rated services, sorted by rating desc.
@@ -129,13 +130,20 @@ function FeaturedServices() {
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate API fetch with 900ms delay
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setServices(MOCK_FEATURED_SERVICES);
-      setIsLoading(false);
-    }, 900);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+    getFeaturedServices(8)
+      .then((data) => {
+        if (isMounted) {
+          setServices(data.services || []);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch featured services:', err);
+        if (isMounted) setIsLoading(false);
+      });
+    return () => { isMounted = false; };
   }, []);
 
   // Track scroll position to show/hide arrow buttons
