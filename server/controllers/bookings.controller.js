@@ -691,15 +691,51 @@ const deleteEventPlan = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Forbidden: This plan does not belong to you.' });
     }
 
-    // Step 2: Only draft plans can be deleted
-    if (plan.status !== 'draft') {
+    // Step 2: Prevent deletion of paid or completed plans to protect escrow
+    if (plan.status === 'paid' || plan.status === 'completed') {
       return res.status(400).json({
         success: false,
-        error: 'Cannot delete a submitted or completed plan.',
+        error: 'Cannot delete a paid or completed plan. Financial transactions are locked.',
       });
     }
 
-    // Step 3: Delete — event_plan_items will cascade delete due to ON DELETE CASCADE FK
+    // Step 2.5: If plan was submitted or confirmed, notify vendors that it was cancelled.
+    if (plan.status === 'submitted' || plan.status === 'confirmed') {
+      try {
+        const vendorsRes = await db.query(
+          `SELECT DISTINCT s.vendor_id
+           FROM event_plan_items epi
+           JOIN services s ON epi.service_id = s.service_id
+           WHERE epi.event_id = $1`,
+          [planId]
+        );
+
+        const customerRes = await db.query(
+          `SELECT full_name FROM users WHERE user_id = $1`,
+          [customerId]
+        );
+        const customerName = customerRes.rows[0]?.full_name || 'A customer';
+
+        for (let row of vendorsRes.rows) {
+          await sendNotification({
+            userId: row.vendor_id,
+            eventId: null, // Keep null so the notification survives the plan deletion
+            title: 'Event Plan Cancelled',
+            messageBody: `${customerName} has cancelled their event plan. The requested services have been removed from your list.`,
+            notificationType: 'booking_cancelled',
+            actionUrl: '/vendor/bookings',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send cancellation notifications:', err);
+      }
+    }
+
+    // Step 3: Delete non-cascading dependent records (Notifications and failed Payments)
+    await db.query(`DELETE FROM notifications WHERE event_id = $1`, [planId]);
+    await db.query(`DELETE FROM payments WHERE event_id = $1`, [planId]);
+
+    // Step 4: Delete the plan itself (event_plan_items will cascade delete)
     await db.query(`DELETE FROM event_plans WHERE event_id = $1`, [planId]);
 
     return res.status(200).json({
@@ -886,19 +922,21 @@ const removeItemFromPlan = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Forbidden: This plan does not belong to you.' });
     }
 
-    if (plan.status !== 'draft') {
-      return res.status(400).json({ success: false, error: 'Cannot remove items from a submitted plan.' });
-    }
-
-    // Step 2: Verify item belongs to this plan
+    // Step 2: Verify item belongs to this plan & get its status
     const itemRes = await db.query(
-      `SELECT event_item_id FROM event_plan_items
+      `SELECT event_item_id, vendor_item_status FROM event_plan_items
        WHERE event_item_id = $1 AND event_id = $2`,
       [itemId, planId]
     );
 
     if (itemRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Item not found in this plan.', code: 'ITEM_NOT_FOUND' });
+    }
+
+    const item = itemRes.rows[0];
+
+    if (plan.status !== 'draft' && item.vendor_item_status !== 'rejected') {
+      return res.status(400).json({ success: false, error: 'Cannot remove items from a submitted plan unless the service was rejected.' });
     }
 
     // Step 3: Delete the item
@@ -922,6 +960,101 @@ const removeItemFromPlan = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: 'Item removed from plan.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// FUNCTION 11.5: PATCH /api/event-plans/:planId/items/:itemId
+// Update a rejected item (or draft item) and resend it
+const updatePlanItem = async (req, res, next) => {
+  try {
+    const customerId = req.user.user_id;
+    const planId  = parseInt(req.params.planId, 10);
+    const itemId  = parseInt(req.params.itemId, 10);
+    const { event_date, guest_count, special_requests, quantity } = req.body;
+
+    // Step 1: Verify plan ownership
+    const planRes = await db.query(
+      `SELECT event_id, customer_id, status FROM event_plans WHERE event_id = $1`,
+      [planId]
+    );
+
+    if (planRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Event plan not found.' });
+    }
+
+    const plan = planRes.rows[0];
+
+    if (plan.customer_id !== customerId) {
+      return res.status(403).json({ success: false, error: 'Forbidden.' });
+    }
+
+    // Step 2: Verify item
+    const itemRes = await db.query(
+      `SELECT * FROM event_plan_items WHERE event_item_id = $1 AND event_id = $2`,
+      [itemId, planId]
+    );
+
+    if (itemRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Item not found.' });
+    }
+
+    const item = itemRes.rows[0];
+
+    // Only allow editing if plan is draft OR item is rejected
+    if (plan.status !== 'draft' && item.vendor_item_status !== 'rejected') {
+      return res.status(400).json({ success: false, error: 'Cannot update this item. It is not rejected.' });
+    }
+
+    // Step 3: Recalculate cost if quantity changed
+    const qty = quantity ? parseInt(quantity, 10) : item.quantity;
+    const line_total = parseFloat(item.unit_price_at_time) * qty;
+
+    // Step 4: Update item and reset status to 'pending'
+    const updateItemRes = await db.query(
+      `UPDATE event_plan_items
+       SET event_date = COALESCE($1, event_date),
+           guest_count = COALESCE($2, guest_count),
+           special_requests = COALESCE($3, special_requests),
+           quantity = $4,
+           line_total = $5,
+           vendor_item_status = 'pending'
+       WHERE event_item_id = $6
+       RETURNING *`,
+      [
+        event_date || item.event_date,
+        guest_count || item.guest_count,
+        special_requests || item.special_requests,
+        qty,
+        line_total,
+        itemId
+      ]
+    );
+
+    // Step 5: Recalculate plan total
+    await db.query(
+      `UPDATE event_plans
+       SET estimated_total_cost = (
+         SELECT COALESCE(SUM(line_total), 0)
+         FROM event_plan_items
+         WHERE event_id = $1 AND vendor_item_status != 'cancelled'
+       ), updated_at = NOW()
+       WHERE event_id = $1`,
+      [planId]
+    );
+
+    // Step 6: If plan was confirmed (which shouldn't technically happen if an item was rejected, 
+    // but just in case), or if we are actively resending, we ensure plan is 'submitted'
+    if (plan.status === 'confirmed') {
+      await db.query(`UPDATE event_plans SET status = 'submitted' WHERE event_id = $1`, [planId]);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Service updated and resent to vendor.',
+      data: { item: updateItemRes.rows[0] },
     });
   } catch (err) {
     next(err);
@@ -973,13 +1106,22 @@ const submitEventPlan = async (req, res, next) => {
       });
     }
 
-    // Step 4: Update plan status to 'submitted'
+    // Step 3.5: Check if there are any pending items
+    const pendingRes = await db.query(
+      `SELECT COUNT(*) AS cnt FROM event_plan_items
+       WHERE event_id = $1 AND vendor_item_status = 'pending'`,
+      [planId]
+    );
+    const hasPending = parseInt(pendingRes.rows[0].cnt) > 0;
+    const newStatus = hasPending ? 'submitted' : 'confirmed';
+
+    // Step 4: Update plan status
     const updateRes = await db.query(
       `UPDATE event_plans
-       SET status = 'submitted', updated_at = NOW()
+       SET status = $2, updated_at = NOW()
        WHERE event_id = $1
        RETURNING *`,
-      [planId]
+      [planId, newStatus]
     );
 
     const updatedPlan = updateRes.rows[0];
@@ -1036,5 +1178,6 @@ module.exports = {
   deleteEventPlan,
   addItemToPlan,
   removeItemFromPlan,
+  updatePlanItem,
   submitEventPlan,
 };

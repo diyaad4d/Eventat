@@ -8,9 +8,9 @@ import {
 import { useQuery } from '@tanstack/react-query';
 
 import useAuthStore from '../../store/authStore';
-import useCartStore from '../../store/cartStore';
 import vendorService from '../../services/vendor.service';
 import { getUnreadCount } from '../../services/notifications.service';
+import { getMyEventPlans } from '../../services/bookings.service';
 import Navbar from './Navbar';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
@@ -66,9 +66,18 @@ const VENDOR_NAV = [
 
 function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const { user, logout } = useAuthStore();
-  const { getItemCount } = useCartStore();
   const navigate = useNavigate();
-  const cartCount = getItemCount();
+  const isCustomer = user?.role === 'customer';
+
+  // Real cart count: items in the user's first draft event plan
+  const { data: cartPlansData } = useQuery({
+    queryKey: ['my-event-plans', 'draft'],
+    queryFn:  () => getMyEventPlans({ status: 'draft' }),
+    enabled:  isCustomer,
+    staleTime: 1000 * 60,
+  });
+  const draftPlan  = cartPlansData?.data?.plans?.[0] ?? null;
+  const cartCount  = draftPlan?.items_count ?? 0;
 
   const navItems = user?.role === 'vendor' ? VENDOR_NAV : CUSTOMER_NAV;
 

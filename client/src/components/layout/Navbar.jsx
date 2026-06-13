@@ -20,7 +20,6 @@ import Badge  from '../ui/Badge';
 const NAV_LINKS = [
   { to: '/Home',     label: 'Home',      icon: <Home size={16} /> },
   { to: '/Services', label: 'Services',  icon: <Briefcase size={16} /> },
-  { to: '/suppliers',label: 'Suppliers', icon: <Users size={16} /> },
 ];
 
 const navLinkClass = ({ isActive }) =>

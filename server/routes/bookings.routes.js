@@ -2,6 +2,7 @@ const express      = require('express');
 const router       = express.Router();
 const { body, param } = require('express-validator');
 const bookingsCtrl = require('../controllers/bookings.controller');
+const paymentCtrl  = require('../controllers/payment.controller');
 const verifyToken  = require('../middleware/auth.middleware');
 const requireRole  = require('../middleware/role.middleware');
 const validate     = require('../middleware/validate.middleware');
@@ -148,15 +149,29 @@ router.post('/event-plans/:id/items',
   bookingsCtrl.addItemToPlan
 );
 
-// DELETE /api/event-plans/:planId/items/:itemId — Remove item from plan
+// DELETE /api/event-plans/:planId/items/:itemId — Remove an item from a draft plan
 router.delete('/event-plans/:planId/items/:itemId',
   ...customerOnly,
   [
-    param('planId').isInt({ min: 1 }).withMessage('planId must be a positive integer.'),
-    param('itemId').isInt({ min: 1 }).withMessage('itemId must be a positive integer.'),
+    param('planId').isInt({ min: 1 }).withMessage('Invalid plan ID.'),
+    param('itemId').isInt({ min: 1 }).withMessage('Invalid item ID.'),
   ],
   validate,
   bookingsCtrl.removeItemFromPlan
+);
+
+// PATCH /api/event-plans/:planId/items/:itemId — Update and resend a rejected item
+router.patch('/event-plans/:planId/items/:itemId',
+  ...customerOnly,
+  [
+    param('planId').isInt({ min: 1 }).withMessage('Invalid plan ID.'),
+    param('itemId').isInt({ min: 1 }).withMessage('Invalid item ID.'),
+    body('event_date').optional().isISO8601().withMessage('Invalid date format.'),
+    body('guest_count').optional().isInt({ min: 1 }).withMessage('Guest count must be at least 1.'),
+    body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be at least 1.'),
+  ],
+  validate,
+  bookingsCtrl.updatePlanItem
 );
 
 // POST /api/event-plans/:id/submit — Submit draft plan
@@ -167,4 +182,35 @@ router.post('/event-plans/:id/submit',
   bookingsCtrl.submitEventPlan
 );
 
+// POST /api/event-plans/:id/pay — Pay for a confirmed plan
+router.post('/event-plans/:id/pay',
+  ...customerOnly,
+  validatePlanId,
+  [
+    body('payment_method')
+      .optional()
+      .isIn(['full_online', 'cash_deposit'])
+      .withMessage('payment_method must be full_online or cash_deposit.'),
+  ],
+  validate,
+  paymentCtrl.payEventPlan
+);
+
+// GET /api/event-plans/:id/payment — Get payment record + escrow for a plan
+router.get('/event-plans/:id/payment',
+  ...customerOnly,
+  validatePlanId,
+  validate,
+  paymentCtrl.getEventPlanPayment
+);
+
+// POST /api/event-plans/:id/complete — Mark event as complete and release escrow
+router.post('/event-plans/:id/complete',
+  ...customerOnly,
+  validatePlanId,
+  validate,
+  paymentCtrl.completeEventPlan
+);
+
 module.exports = router;
+

@@ -52,8 +52,8 @@ const validateCreateService = [
     .isFloat({ min: 0.01 }).withMessage('base_price must be a positive number.'),
   body('pricing_unit')
     .notEmpty().withMessage('pricing_unit is required.')
-    .isIn(['per_event', 'per_hour', 'per_person', 'per_day'])
-    .withMessage('pricing_unit must be one of: per_event, per_hour, per_person, per_day.'),
+    .isIn(['per_event', 'per_hour', 'per_person', 'per_day', 'per_item'])
+    .withMessage('pricing_unit must be one of: per_event, per_hour, per_person, per_day, per_item.'),
   body('category_id')
     .notEmpty().withMessage('category_id is required.')
     .isInt({ min: 1 }).withMessage('category_id must be a positive integer.'),
@@ -105,7 +105,7 @@ router.patch('/vendor/services/:id',
     body('description').optional().isLength({ min: 50 }).withMessage('description must be at least 50 characters.'),
     body('base_price').optional().isFloat({ min: 0.01 }).withMessage('base_price must be a positive number.'),
     body('pricing_unit').optional()
-      .isIn(['per_event', 'per_hour', 'per_person', 'per_day'])
+      .isIn(['per_event', 'per_hour', 'per_person', 'per_day', 'per_item'])
       .withMessage('Invalid pricing_unit.'),
     body('category_id').optional().isInt({ min: 1 }).withMessage('category_id must be a positive integer.'),
     body('subcategory_id').optional().isInt({ min: 1 }).withMessage('subcategory_id must be a positive integer.'),
@@ -229,6 +229,17 @@ router.post('/vendors/me/payment/change-request',
   ],
   validate,
   vendorsCtrl.requestPaymentChange
+);
+
+// ── Public Routes ───────────────────────────────────────────────────────────
+
+// GET /api/vendors/:id/public — public vendor profile
+router.get('/vendors/:id/public',
+  [
+    param('id').isInt({ min: 1 }).withMessage('Vendor ID must be a positive integer.'),
+  ],
+  validate,
+  vendorsCtrl.getPublicVendorProfile
 );
 
 module.exports = router;

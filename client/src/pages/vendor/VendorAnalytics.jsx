@@ -176,12 +176,12 @@ function VendorAnalytics() {
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Total Revenue</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">Total Revenue (Take-home)</p>
               <p className="text-3xl font-black text-[var(--color-dark)]">
-                {Number(kpis.total_revenue ?? 0).toLocaleString()}
+                {Number((kpis.total_revenue ?? 0) * 0.90).toLocaleString()}
                 <span className="text-lg font-bold text-gray-400"> JOD</span>
               </p>
-              <p className="text-xs text-gray-400 mt-1">From accepted bookings</p>
+              <p className="text-xs font-medium text-gray-400 mt-1">From <span className="font-bold text-[var(--color-gold-dark)]">{Number(kpis.total_revenue ?? 0).toLocaleString()} JOD</span> total bookings</p>
             </div>
             <div className="flex items-end gap-0.5 h-8">
               {revenueBars.length > 0 ? revenueBars.map((rev, i) => (
@@ -506,11 +506,14 @@ function VendorAnalytics() {
                   </span>
                 </div>
               ))}
-              <div className="flex items-center justify-between p-3 bg-[var(--color-gold)]/5 rounded-xl border border-[var(--color-gold)]/20 mt-2">
-                <span className="text-sm font-bold text-[var(--color-dark)]">Total Revenue</span>
-                <span className="text-sm font-black text-[var(--color-gold-dark)]">
-                  {Number(kpis.total_revenue ?? 0).toLocaleString()} JOD
-                </span>
+              <div className="flex flex-col gap-1 mt-2">
+                <div className="flex items-center justify-between p-3 bg-[var(--color-gold)]/5 rounded-xl border border-[var(--color-gold)]/20">
+                  <span className="text-sm font-bold text-[var(--color-dark)]">Total Revenue (Take-home)</span>
+                  <span className="text-sm font-black text-[var(--color-gold-dark)]">
+                    {Number((kpis.total_revenue ?? 0) * 0.90).toLocaleString()} JOD
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 text-center font-medium">From {Number(kpis.total_revenue ?? 0).toLocaleString()} JOD total bookings</p>
               </div>
             </div>
           )}

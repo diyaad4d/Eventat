@@ -842,14 +842,15 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
         </div>
 
         {/* Two-column layout */}
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-6 items-stretch">
 
-          {/* Desktop sidebar — FIX 2: floating tab */}
+          {/* ── Desktop Sidebar ── */}
           <div
             key="sidebar-wrapper"
-            className="hidden md:block relative shrink-0"
+            className="hidden md:block sticky top-[72px] shrink-0 z-10 self-start"
             style={{
               width:      sidebarOpen ? '260px' : '0px',
+              height:     'calc(100vh - 90px)',
               transition: 'width 300ms cubic-bezier(0.4,0,0.2,1)',
             }}
           >
@@ -903,8 +904,7 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
             <aside
               className={[
                 'flex flex-col',
-                'sticky top-[72px]',
-                'h-[calc(100vh-90px)] overflow-hidden',
+                'h-full overflow-hidden',
                 'rounded-2xl border border-gray-100',
                 'bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)]',
                 'transition-[width,opacity] duration-300',
@@ -926,7 +926,7 @@ const FilteredServicesSection = React.memo(function FilteredServicesSection(
           </div>
 
           {/* Results */}
-          <main className="flex-1 min-w-0" aria-label="Services results">
+          <main className="flex-1 min-w-0" style={{ minHeight: 'calc(100vh + 400px)' }} aria-label="Services results">
 
             {/* Sort / control bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 p-4 rounded-2xl bg-white border border-gray-100 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">

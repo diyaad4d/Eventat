@@ -736,7 +736,11 @@ function VendorProfile() {
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm text-[var(--color-dark)] truncate">{srv.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {Number(srv.base_price).toLocaleString()} JOD · {(srv.pricing_unit ?? '').replace('_', ' ')}
+                        {Number(srv.base_price).toLocaleString()} JOD · {
+                          srv.pricing_unit === 'per_item' ? 'per piece' : 
+                          srv.pricing_unit === 'per_person' ? 'per guest' : 
+                          (srv.pricing_unit ?? '').replace('_', ' ')
+                        }
                         · {srv.total_bookings ?? 0} bookings
                       </p>
                     </div>
@@ -850,7 +854,11 @@ function VendorProfile() {
                 <div className="p-4">
                   <h3 className="font-bold text-[var(--color-dark)] text-sm mb-1 truncate">{srv.title}</h3>
                   <p className="text-xs text-gray-500 mb-3">
-                    {Number(srv.base_price).toLocaleString()} JOD · {(srv.pricing_unit ?? '').replace('_', ' ')}
+                    {Number(srv.base_price).toLocaleString()} JOD · {
+                      srv.pricing_unit === 'per_item' ? 'per piece' : 
+                      srv.pricing_unit === 'per_person' ? 'per guest' : 
+                      (srv.pricing_unit ?? '').replace('_', ' ')
+                    }
                   </p>
                   <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
                     <span>{srv.total_bookings ?? 0} bookings</span>
@@ -862,7 +870,7 @@ function VendorProfile() {
                       className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors">
                       <Edit2 size={13} /> Edit
                     </Link>
-                    <Link to={`/services/${srv.service_id}`} target="_blank"
+                    <Link to={`/service/${srv.service_id}`} target="_blank"
                       className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[var(--color-gold)]/10 text-[var(--color-gold-dark)] text-xs font-bold rounded-lg hover:bg-[var(--color-gold)]/20 transition-colors">
                       <Eye size={13} /> View
                     </Link>

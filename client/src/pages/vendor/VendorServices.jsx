@@ -254,7 +254,11 @@ function VendorServices() {
                       </td>
                       <td className="p-4 text-sm text-gray-600">
                         <span className="font-extrabold text-[var(--color-dark)]">{Number(srv.base_price).toLocaleString()} JOD</span>
-                        <span className="text-xs text-gray-400 block mt-0.5 capitalize">{(srv.pricing_unit ?? '').replace('_', ' ')}</span>
+                        <span className="text-xs text-gray-400 block mt-0.5 capitalize">
+                          {srv.pricing_unit === 'per_item' ? 'per piece' : 
+                           srv.pricing_unit === 'per_person' ? 'per guest' : 
+                           (srv.pricing_unit ?? '').replace('_', ' ')}
+                        </span>
                       </td>
                       <td className="p-4 text-center">
                         <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">

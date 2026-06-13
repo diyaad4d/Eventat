@@ -6,116 +6,11 @@ import {
   ChevronRight, MessageCircle, Share2, Heart,
   Clock, Briefcase,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import vendorService from '../../services/vendor.service';
 import ServiceCard from '../../components/Home/ServiceCard';
 
-const MOCK_VENDOR = {
-  id:          'v1',
-  name:        'Royal Hotels & Resorts',
-  tagline:     'Crafting unforgettable moments since 2010',
-  avatar:      'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&q=80',
-  cover:       'https://images.unsplash.com/photo-1519741497674-611481863552?w=1400&q=80',
-  city:        'Amman, Jordan',
-  category:    'Venue',
-  isVerified:  true,
-  memberSince: 'March 2020',
-  rating:      4.8,
-  reviewCount: 124,
-  totalEvents: 231,
-  responseTime:'Within 2 hours',
-  about: `Royal Hotels & Resorts has been one of Jordan's premier event venue providers since 2010. We specialize in grand weddings, prestigious corporate galas, and milestone celebrations.\n\nOur dedicated team of event coordinators works tirelessly to ensure every detail is flawless — from crystal chandelier lighting to bespoke floral arrangements and gourmet catering.\n\nWith over 200 successful events under our belt, we bring passion, precision, and elegance to everything we do.`,
-  phone:       '+962 7 8123 4567',
-  email:       'events@royalhotels.jo',
-  website:     'www.royalhotels.jo',
-  socialLinks: {
-    instagram: 'royalhotels_jo',
-    facebook:  'RoyalHotelsJordan',
-  },
-};
-
-const MOCK_VENDOR_SERVICES = [
-  {
-    id: 's1',
-    title: 'Grand Royal Ballroom',
-    category: 'Venue',
-    categorySlug: 'venue',
-    vendorName: 'Royal Hotels & Resorts',
-    location: 'Amman, 5th Circle',
-    rating: 4.9,
-    reviewCount: 98,
-    basePrice: 1500,
-    pricingUnit: 'per_event',
-    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80',
-  },
-  {
-    id: 's2',
-    title: 'The Pearl Ballroom',
-    category: 'Venue',
-    categorySlug: 'venue',
-    vendorName: 'Royal Hotels & Resorts',
-    location: 'Amman, Abdoun',
-    rating: 4.7,
-    reviewCount: 61,
-    basePrice: 1200,
-    pricingUnit: 'per_event',
-    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80',
-  },
-  {
-    id: 's3',
-    title: 'Rooftop Garden Terrace',
-    category: 'Venue',
-    categorySlug: 'venue',
-    vendorName: 'Royal Hotels & Resorts',
-    location: 'Amman, Jabal Amman',
-    rating: 4.6,
-    reviewCount: 44,
-    basePrice: 800,
-    pricingUnit: 'per_event',
-    image: 'https://images.unsplash.com/photo-1525258946800-98ccd7a0ea00?w=600&q=80',
-  },
-  {
-    id: 's4',
-    title: 'Executive Conference Hall',
-    category: 'Venue',
-    categorySlug: 'venue',
-    vendorName: 'Royal Hotels & Resorts',
-    location: 'Amman, 5th Circle',
-    rating: 4.8,
-    reviewCount: 37,
-    basePrice: 600,
-    pricingUnit: 'per_hour',
-    image: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=600&q=80',
-  },
-];
-
-const MOCK_VENDOR_REVIEWS = [
-  {
-    id: 'r1',
-    reviewerName: 'Sarah Al-Ahmad',
-    reviewerAvatar: 'https://i.pravatar.cc/150?img=47',
-    date: 'March 15, 2025',
-    rating: 5,
-    service: 'Grand Royal Ballroom',
-    text: 'Absolutely stunning venue! The staff was incredibly professional. Our guests are still talking about it.',
-  },
-  {
-    id: 'r2',
-    reviewerName: 'Omar Khalil',
-    reviewerAvatar: 'https://i.pravatar.cc/150?img=12',
-    date: 'February 2, 2025',
-    rating: 5,
-    service: 'The Pearl Ballroom',
-    text: 'Perfect for our corporate gala. The AV setup was world-class and the catering team was flawless.',
-  },
-  {
-    id: 'r3',
-    reviewerName: 'Lina Nasser',
-    reviewerAvatar: 'https://i.pravatar.cc/150?img=32',
-    date: 'January 20, 2025',
-    rating: 4,
-    service: 'Grand Royal Ballroom',
-    text: 'Beautiful space with great service. Minor delay in setup but the team resolved it quickly.',
-  },
-];
+// Mock data removed in favor of real backend data
 
 function ReviewsSection({ reviews }) {
   const totalCount = reviews.length;
@@ -187,15 +82,73 @@ function ReviewsSection({ reviews }) {
 
 function VendorPublicProfile() {
   const { vendorId } = useParams();
-  const vendor = MOCK_VENDOR;
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['publicVendor', vendorId],
+    queryFn: () => vendorService.getPublicProfile(vendorId),
+  });
 
   const [activeTab, setActiveTab]   = useState('services');
   const [isSaved,   setIsSaved]     = useState(false);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--color-surface)] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-[var(--color-gold)] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (isError || !data || !data.vendor) {
+    return (
+      <div className="min-h-screen bg-[var(--color-surface)] flex flex-col items-center justify-center text-gray-500">
+        <p className="text-xl font-bold mb-2">Vendor Not Found</p>
+        <Link to="/" className="text-[var(--color-gold)] hover:underline">Go back home</Link>
+      </div>
+    );
+  }
+
+  const { vendor: vData, services: vServices, reviews: vReviews } = data;
+
+  // Calculate rating/reviews from services
+  const totalReviews = vServices.reduce((acc, s) => acc + (s.reviewCount || 0), 0);
+  const avgRating = totalReviews > 0 
+    ? (vServices.reduce((acc, s) => acc + (s.rating * s.reviewCount), 0) / totalReviews).toFixed(1)
+    : 0;
+
+  const rawSocialLinks = vData.social_links ? (typeof vData.social_links === 'string' ? JSON.parse(vData.social_links) : vData.social_links) : {};
+  const socialLinks = Array.isArray(rawSocialLinks) 
+    ? rawSocialLinks.reduce((acc, curr) => ({ ...acc, [curr.platform]: curr.url }), {})
+    : rawSocialLinks;
+
+  const vendor = {
+    id:          vData.vendor_id,
+    name:        vData.company_name || vData.full_name,
+    tagline:     'Trusted Event Partner', // Default tagline
+    avatar:      vData.logo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(vData.company_name || vData.full_name || 'Vendor')}&background=fff&color=E8C97A`,
+    cover:       'https://images.unsplash.com/photo-1519741497674-611481863552?w=1400&q=80', // Default cover for now
+    city:        vData.city || 'Location not specified',
+    category:    'Vendor',
+    isVerified:  true,
+    memberSince: new Date(vData.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    rating:      parseFloat(avgRating),
+    reviewCount: totalReviews,
+    totalEvents: parseInt(vData.total_events_hosted || 0),
+    responseTime:'Usually responds in hours',
+    about:       vData.company_description || 'No description provided.',
+    phone:       socialLinks.phone || '', // Need to fallback? We don't expose user phone publicly by default yet.
+    email:       '', // Not exposed by default for privacy, or add to query if needed
+    website:     socialLinks.website || '',
+    socialLinks: {
+      instagram: socialLinks.instagram || '',
+      facebook:  socialLinks.facebook || '',
+    },
+  };
+
   const TABS = [
-    { id: 'services', label: 'Services', count: MOCK_VENDOR_SERVICES.length },
-    { id: 'reviews',  label: 'Reviews',  count: MOCK_VENDOR_REVIEWS.length  },
-    { id: 'about',    label: 'About',    count: null                         },
+    { id: 'services', label: 'Services', count: vServices.length },
+    { id: 'reviews',  label: 'Reviews',  count: vReviews.length  },
+    { id: 'about',    label: 'About',    count: null             },
   ];
 
   return (
@@ -333,7 +286,7 @@ function VendorPublicProfile() {
             <div className="flex items-center gap-1.5 mb-1">
               <Briefcase size={18} className="text-emerald-500" />
               <span className="text-2xl font-black text-[var(--color-dark)]">
-                {MOCK_VENDOR_SERVICES.length}
+                {vServices.length}
               </span>
             </div>
             <span className="text-xs text-gray-500 font-medium">
@@ -381,7 +334,7 @@ function VendorPublicProfile() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 
                 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {MOCK_VENDOR_SERVICES.map(service => (
+                {vServices.map(service => (
                   <ServiceCard
                     key={service.id}
                     service={service}
@@ -394,7 +347,7 @@ function VendorPublicProfile() {
 
           {/* ── REVIEWS TAB ── */}
           {activeTab === 'reviews' && (
-            <ReviewsSection reviews={MOCK_VENDOR_REVIEWS} />
+            <ReviewsSection reviews={vReviews} />
           )}
 
           {/* ── ABOUT TAB ── */}
@@ -428,82 +381,94 @@ function VendorPublicProfile() {
                   shadow-sm p-6 flex flex-col gap-4">
 
                   {/* Phone */}
-                  <a href={`tel:${vendor.phone}`}
-                    className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-xl 
-                      bg-emerald-50 text-emerald-600 flex items-center 
-                      justify-center shrink-0">
-                      <Phone size={18} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-gray-400 
-                        uppercase tracking-wide">Phone</p>
-                      <p className="text-sm font-bold text-[var(--color-dark)] 
-                        group-hover:text-[var(--color-gold)] transition-colors">
-                        {vendor.phone}
-                      </p>
-                    </div>
-                  </a>
+                  {vendor.phone && (
+                    <a href={`tel:${vendor.phone}`}
+                      className="flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-xl 
+                        bg-emerald-50 text-emerald-600 flex items-center 
+                        justify-center shrink-0">
+                        <Phone size={18} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 
+                          uppercase tracking-wide">Phone</p>
+                        <p className="text-sm font-bold text-[var(--color-dark)] 
+                          group-hover:text-[var(--color-gold)] transition-colors">
+                          {vendor.phone}
+                        </p>
+                      </div>
+                    </a>
+                  )}
 
                   {/* Email */}
-                  <a href={`mailto:${vendor.email}`}
-                    className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-xl 
-                      bg-blue-50 text-blue-600 flex items-center 
-                      justify-center shrink-0">
-                      <Mail size={18} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-gray-400 
-                        uppercase tracking-wide">Email</p>
-                      <p className="text-sm font-bold text-[var(--color-dark)] 
-                        group-hover:text-[var(--color-gold)] transition-colors">
-                        {vendor.email}
-                      </p>
-                    </div>
-                  </a>
+                  {vendor.email && (
+                    <a href={`mailto:${vendor.email}`}
+                      className="flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-xl 
+                        bg-blue-50 text-blue-600 flex items-center 
+                        justify-center shrink-0">
+                        <Mail size={18} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 
+                          uppercase tracking-wide">Email</p>
+                        <p className="text-sm font-bold text-[var(--color-dark)] 
+                          group-hover:text-[var(--color-gold)] transition-colors">
+                          {vendor.email}
+                        </p>
+                      </div>
+                    </a>
+                  )}
 
                   {/* Website */}
-                  <a href={`https://${vendor.website}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-xl 
-                      bg-purple-50 text-purple-600 flex items-center 
-                      justify-center shrink-0">
-                      <Globe size={18} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-gray-400 
-                        uppercase tracking-wide">Website</p>
-                      <p className="text-sm font-bold text-[var(--color-dark)] 
-                        group-hover:text-[var(--color-gold)] transition-colors">
-                        {vendor.website}
-                      </p>
-                    </div>
-                  </a>
+                  {vendor.website && (
+                    <a href={vendor.website.startsWith('http') ? vendor.website : `https://${vendor.website}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-xl 
+                        bg-purple-50 text-purple-600 flex items-center 
+                        justify-center shrink-0">
+                        <Globe size={18} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 
+                          uppercase tracking-wide">Website</p>
+                        <p className="text-sm font-bold text-[var(--color-dark)] 
+                          group-hover:text-[var(--color-gold)] transition-colors">
+                          {vendor.website}
+                        </p>
+                      </div>
+                    </a>
+                  )}
 
-                  <div className="border-t border-gray-100 pt-4 mt-1">
-                    <p className="text-[11px] font-bold text-gray-400 
-                      uppercase tracking-wide mb-3">Social</p>
-                    <div className="flex gap-3">
-                      <a href={`https://instagram.com/${vendor.socialLinks.instagram}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 
-                          bg-pink-50 text-pink-600 rounded-xl text-xs 
-                          font-bold hover:bg-pink-100 transition-colors">
-                        <Globe size={14} />
-                        Instagram
-                      </a>
-                      <a href={`https://facebook.com/${vendor.socialLinks.facebook}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 
-                          bg-blue-50 text-blue-600 rounded-xl text-xs 
-                          font-bold hover:bg-blue-100 transition-colors">
-                        <Globe size={14} />
-                        Facebook
-                      </a>
+                  {(vendor.socialLinks.instagram || vendor.socialLinks.facebook) && (
+                    <div className="border-t border-gray-100 pt-4 mt-1">
+                      <p className="text-[11px] font-bold text-gray-400 
+                        uppercase tracking-wide mb-3">Social</p>
+                      <div className="flex gap-3">
+                        {vendor.socialLinks.instagram && (
+                          <a href={vendor.socialLinks.instagram.startsWith('http') ? vendor.socialLinks.instagram : `https://instagram.com/${vendor.socialLinks.instagram}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 
+                              bg-pink-50 text-pink-600 rounded-xl text-xs 
+                              font-bold hover:bg-pink-100 transition-colors">
+                            <Globe size={14} />
+                            Instagram
+                          </a>
+                        )}
+                        {vendor.socialLinks.facebook && (
+                          <a href={vendor.socialLinks.facebook.startsWith('http') ? vendor.socialLinks.facebook : `https://facebook.com/${vendor.socialLinks.facebook}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 
+                              bg-blue-50 text-blue-600 rounded-xl text-xs 
+                              font-bold hover:bg-blue-100 transition-colors">
+                            <Globe size={14} />
+                            Facebook
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, DollarSign, Plus, ArrowLeft, X, ShoppingBag, Loader2, Package } from 'lucide-react';
+import { Calendar, MapPin, Users, DollarSign, Plus, ArrowLeft, X, ShoppingBag, Loader2, Package, RefreshCw, Edit2, CheckCircle2, AlertTriangle, Star } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Badge from '../../components/ui/Badge';
+import PaymentView from '../../components/payment/PaymentView';
 import * as bookingsService from '../../services/bookings.service';
 import { toastSuccess, toastError } from '../../utils/toast';
 
@@ -21,6 +22,7 @@ function planStatusVariant(status) {
     case 'draft':      return 'gray';
     case 'submitted':  return 'info';
     case 'confirmed':  return 'success';
+    case 'paid':       return 'success';
     case 'completed':  return 'success';
     case 'cancelled':  return 'error';
     default:           return 'gray';
@@ -32,6 +34,7 @@ function itemStatusVariant(status) {
     case 'accepted':  return 'success';
     case 'pending':   return 'warning';
     case 'rejected':  return 'error';
+    case 'paid':      return 'success';
     case 'completed': return 'info';
     case 'cancelled': return 'error';
     default:          return 'gray';
@@ -155,11 +158,85 @@ function CreatePlanModal({ onClose, onSuccess }) {
   );
 }
 
+// ── Edit Item Modal ────────────────────────────────────────────────────────────
+function EditItemModal({ item, form, setForm, onClose, onSubmit, isPending }) {
+  if (!item) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="text-xl font-extrabold text-[var(--color-dark)]">Edit Service Request</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="p-5 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-gray-700">Event Date</label>
+            <input
+              type="date"
+              required
+              min={new Date().toISOString().split('T')[0]}
+              value={form.event_date}
+              onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[var(--color-gold)] focus:ring-1 focus:ring-[var(--color-gold)] outline-none transition-all"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-bold text-gray-700">Guest Count</label>
+              <input
+                type="number"
+                min="1"
+                value={form.guest_count}
+                onChange={(e) => setForm({ ...form, guest_count: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[var(--color-gold)] focus:ring-1 focus:ring-[var(--color-gold)] outline-none transition-all"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-bold text-gray-700">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[var(--color-gold)] focus:ring-1 focus:ring-[var(--color-gold)] outline-none transition-all"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-gray-700">Special Requests</label>
+            <textarea
+              rows={3}
+              value={form.special_requests}
+              onChange={(e) => setForm({ ...form, special_requests: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[var(--color-gold)] focus:ring-1 focus:ring-[var(--color-gold)] outline-none transition-all resize-none"
+              placeholder="Any specific instructions for the vendor..."
+            />
+          </div>
+          <div className="flex gap-3 justify-end mt-4">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cancel</button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--color-gold)] text-white hover:bg-[var(--color-gold-dark)] shadow-sm transition-colors disabled:opacity-70"
+            >
+              {isPending && <Loader2 size={16} className="animate-spin" />}
+              Save & Resend
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 function CustomerEvents() {
-  const [view,           setView]           = useState('list');
+  const [view,           setView]           = useState('list'); // 'list' | 'detail' | 'payment'
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [editingItem,    setEditingItem]    = useState(null);
+  const [editForm,       setEditForm]       = useState({ event_date: '', guest_count: '', quantity: '', special_requests: '' });
   const queryClient = useQueryClient();
 
   // ── Plans list query ────────────────────────────────────────────────────
@@ -187,7 +264,7 @@ function CustomerEvents() {
       queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
       setView('list');
       setSelectedPlanId(null);
-      toastSuccess('Event plan cancelled.');
+      toastSuccess('Event plan deleted.');
     },
     onError: (err) => {
       toastError(err.response?.data?.error ?? 'Failed to cancel plan.');
@@ -203,6 +280,46 @@ function CustomerEvents() {
     },
     onError: (err) => {
       toastError(err.response?.data?.error ?? 'Failed to remove service.');
+    },
+  });
+
+  // ── Update/Resend item mutation ────────────────────────────────────────
+  const updateItemMutation = useMutation({
+    mutationFn: ({ planId, itemId, data }) => bookingsService.updateEventPlanItem(planId, itemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-plan', selectedPlanId] });
+      queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+      setEditingItem(null);
+      toastSuccess('Service updated and resent to vendor.');
+    },
+    onError: (err) => {
+      toastError(err.response?.data?.error ?? 'Failed to update service.');
+    },
+  });
+
+  // ── Submit plan mutation ─────────────────────────────────────
+  const submitPlanMutation = useMutation({
+    mutationFn: (planId) => bookingsService.submitEventPlan(planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['event-plan', selectedPlanId] });
+      toastSuccess('Plan submitted! Vendors will respond shortly.');
+    },
+    onError: (err) => {
+      toastError(err.response?.data?.error ?? 'Failed to submit plan.');
+    },
+  });
+
+  // ── Complete plan mutation ─────────────────────────────────────
+  const completePlanMutation = useMutation({
+    mutationFn: (planId) => bookingsService.completeEventPlan(planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['event-plan', selectedPlanId] });
+      toastSuccess('Event marked as complete! Funds released to vendors.');
+    },
+    onError: (err) => {
+      toastError(err.response?.data?.error ?? 'Failed to complete plan.');
     },
   });
 
@@ -279,15 +396,50 @@ function CustomerEvents() {
                       <div className="flex flex-col items-center sm:items-end shrink-0 gap-2">
                         <span className="font-extrabold text-[var(--color-dark)]">{parseFloat(item.line_total || 0).toLocaleString()} JOD</span>
                         <Badge variant={itemStatusVariant(item.status)} size="sm" className="capitalize">{item.status}</Badge>
-                        {selectedPlan.status === 'draft' && (
-                          <button
-                            onClick={() => removeItemMutation.mutate({ planId: selectedPlan.event_id, itemId: item.event_item_id })}
-                            disabled={isRemoving}
-                            className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
-                          >
-                            {isRemoving ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                            Remove
-                          </button>
+                        {(selectedPlan.status === 'draft' || item.status === 'rejected') && (
+                          <div className="flex gap-2 justify-center sm:justify-end mt-2">
+                            {item.status === 'rejected' && (
+                              <>
+                                <button
+                                  onClick={() => updateItemMutation.mutate({ planId: selectedPlan.event_id, itemId: item.event_item_id, data: {} })}
+                                  disabled={updateItemMutation.isPending}
+                                  className="text-xs text-[var(--color-gold-dark)] hover:underline font-semibold flex items-center gap-1"
+                                >
+                                  {updateItemMutation.isPending && updateItemMutation.variables?.itemId === item.event_item_id ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                  Resend
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingItem(item);
+                                    setEditForm({
+                                      event_date: item.event_date ? item.event_date.split('T')[0] : '',
+                                      guest_count: item.guest_count || '',
+                                      quantity: item.quantity || 1,
+                                      special_requests: item.special_requests || ''
+                                    });
+                                  }}
+                                  className="text-xs text-blue-600 hover:underline font-semibold flex items-center gap-1"
+                                >
+                                  <Edit2 size={12} /> Edit
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => removeItemMutation.mutate({ planId: selectedPlan.event_id, itemId: item.event_item_id })}
+                              disabled={isRemoving}
+                              className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
+                            >
+                              {isRemoving ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                        {selectedPlan.status === 'completed' && (
+                          <div className="flex justify-center sm:justify-end mt-3 w-full sm:w-auto">
+                            <Link to={`/service/${item.service_id}#reviews`} className="w-full sm:w-auto text-sm font-extrabold text-white bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                              <Star size={16} className="fill-white" /> Write a Review
+                            </Link>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -314,20 +466,63 @@ function CustomerEvents() {
               </div>
               {selectedPlan.status === 'draft' && (
                 <>
-                  <button className="w-full py-3.5 rounded-xl bg-[var(--color-dark)] text-white font-bold hover:bg-[#1a1a1a] shadow-md transition-all">
+                  <button
+                    onClick={() => submitPlanMutation.mutate(selectedPlan.event_id)}
+                    disabled={submitPlanMutation.isPending || planItems.length === 0}
+                    className="w-full py-3.5 rounded-xl bg-[var(--color-dark)] text-white font-bold hover:bg-[#1a1a1a] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                    {submitPlanMutation.isPending && <Loader2 size={16} className="animate-spin" />}
                     Submit Event Plan
                   </button>
-                  <button
-                    onClick={() => cancelPlanMutation.mutate(selectedPlan.event_id)}
-                    disabled={cancelPlanMutation.isPending}
-                    className="w-full py-3 rounded-xl border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {cancelPlanMutation.isPending && <Loader2 size={16} className="animate-spin" />}
-                    Cancel Plan
-                  </button>
+                  <p className="text-xs text-center text-gray-500 mt-1">Submitting will send requests to all selected vendors.</p>
                 </>
               )}
-              <p className="text-xs text-center text-gray-500 -mt-2">Submitting will send requests to all selected vendors.</p>
+              {['draft', 'submitted', 'confirmed'].includes(selectedPlan.status) && (
+                <button
+                  onClick={() => cancelPlanMutation.mutate(selectedPlan.event_id)}
+                  disabled={cancelPlanMutation.isPending}
+                  className="w-full py-3 rounded-xl border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {cancelPlanMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                  Delete Event Plan
+                </button>
+              )}
+              {selectedPlan.status === 'confirmed' && (() => {
+                const hasRejectedItems = planItems.some(i => i.status === 'rejected');
+                return (
+                  <>
+                    <button
+                      onClick={() => setView('payment')}
+                      disabled={hasRejectedItems}
+                      className="w-full py-3.5 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:bg-gray-400"
+                    >
+                      <DollarSign size={18} /> Pay Now
+                    </button>
+                    {hasRejectedItems && (
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+                        <p className="text-xs text-red-600 font-bold flex flex-col items-center gap-1">
+                          <AlertTriangle size={16} />
+                          Please remove or resend rejected services before proceeding to payment.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+              {selectedPlan.status === 'paid' && (
+                <>
+                  <button
+                    onClick={() => completePlanMutation.mutate(selectedPlan.event_id)}
+                    disabled={completePlanMutation.isPending}
+                    className="w-full py-3.5 rounded-xl bg-[var(--color-dark)] text-white font-bold hover:bg-[#1a1a1a] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {completePlanMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                    Mark Event as Complete
+                  </button>
+                  <p className="text-xs text-center text-gray-500 mt-2 leading-relaxed px-2">
+                    <strong>Note:</strong> If not marked complete manually, the event will automatically complete <strong>24 hours</strong> after the scheduled date, and funds will be released to the vendor.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -407,11 +602,33 @@ function CustomerEvents() {
 
   return (
     <div className="w-full">
-      {view === 'list' ? renderListView() : renderDetailView()}
+      {view === 'list' && renderListView()}
+      {view === 'detail' && renderDetailView()}
+      {view === 'payment' && selectedPlan && (
+        <PaymentView
+          plan={selectedPlan}
+          planItems={planItems}
+          onBack={() => setView('detail')}
+          onPaymentSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+            queryClient.invalidateQueries({ queryKey: ['event-plan', selectedPlanId] });
+          }}
+        />
+      )}
       {isModalOpen && (
         <CreatePlanModal
           onClose={() => setIsModalOpen(false)}
           onSuccess={handlePlanCreated}
+        />
+      )}
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          form={editForm}
+          setForm={setEditForm}
+          onClose={() => setEditingItem(null)}
+          isPending={updateItemMutation.isPending}
+          onSubmit={() => updateItemMutation.mutate({ planId: selectedPlanId, itemId: editingItem.event_item_id, data: editForm })}
         />
       )}
     </div>

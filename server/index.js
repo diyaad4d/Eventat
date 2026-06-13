@@ -71,8 +71,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(errorHandler);
 
 // ==========================================
-// 5. START SERVER
+// 5. START SERVER & BACKGROUND JOBS
 // ==========================================
+const startAutoCompleteJob = require('./jobs/autoCompleteJob');
+startAutoCompleteJob();
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

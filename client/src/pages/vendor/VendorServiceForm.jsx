@@ -15,12 +15,12 @@ const CITIES = [
   'Tafilah', "Ma'an", 'Aqaba', 'Mafraq', 'Jerash', 'Ajloun', 
   'Dead Sea', 'Petra', 'Wadi Rum'
 ];
-const PRICING_UNITS = ['per_event', 'per_hour', 'per_person', 'per_day'];
+const PRICING_UNITS = ['per_event', 'per_hour', 'per_person', 'per_day', 'per_item'];
 
 // ── Empty form state ────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   title: '', category: '', subcategory: '', description: '',
-  pricingUnit: 'per_event', customPricingUnit: '', basePrice: '',
+  pricingUnit: 'per_event', basePrice: '',
   city: 'Amman', capacity: '', tags: [], isActive: true,
   coverImage: null,
   galleryImages: [],
@@ -66,11 +66,9 @@ function VendorServiceForm() {
         subcategory:      editServiceData.subcategory_id  ? String(editServiceData.subcategory_id) : '',
         description:      editServiceData.description      ?? '',
         pricingUnit:      editServiceData.pricing_unit     ?? 'per_event',
-        customPricingUnit: '',
         basePrice:        String(editServiceData.base_price ?? ''),
         city:             editServiceData.city             ?? 'Amman',
         capacity:         String(editServiceData.capacity  ?? ''),
-        // NOTE: No tags column in schema — leave empty for edits
         tags:             [],
         isActive:         editServiceData.is_active        ?? true,
         coverImage:       editServiceData.primary_image_url
@@ -138,9 +136,7 @@ function VendorServiceForm() {
       title:        formData.title.trim(),
       description:  formData.description.trim(),
       base_price:   parseFloat(formData.basePrice),
-      pricing_unit: formData.pricingUnit === 'other'
-        ? 'per_event' // fallback — API only accepts the 4 enum values
-        : formData.pricingUnit,
+      pricing_unit: formData.pricingUnit,
       city:         formData.city,
       is_active:    formData.isActive,
       category_id:  parseInt(formData.category, 10),
@@ -345,15 +341,17 @@ function VendorServiceForm() {
             onChange={(e) => setFormData({ ...formData, pricingUnit: e.target.value })}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] text-sm bg-white mb-2"
           >
-            {PRICING_UNITS.map((unit) => <option key={unit} value={unit}>{unit.replace('_', ' ')}</option>)}
-            <option value="other">Other (Custom)</option>
+            {PRICING_UNITS.map((unit) => {
+              let label = unit.replace('_', ' ');
+              if (unit === 'per_item') label = 'per piece';
+              if (unit === 'per_person') label = 'per guest';
+              return (
+                <option key={unit} value={unit}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
-          {formData.pricingUnit === 'other' && (
-            <div className="flex items-center border border-gray-200 rounded-xl px-3 focus-within:ring-2 focus-within:ring-[var(--color-gold)] w-full bg-white">
-              <span className="text-gray-500 text-sm font-bold mr-1">per</span>
-              <input type="text" value={formData.customPricingUnit} onChange={(e) => setFormData({ ...formData, customPricingUnit: e.target.value })} placeholder="e.g. piece" className="w-full py-3 outline-none text-sm bg-transparent" />
-            </div>
-          )}
         </div>
         <div className="md:col-span-4">
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Base Price (JOD)</label>
@@ -380,12 +378,25 @@ function VendorServiceForm() {
     </div>
   );
 
+  const getCapacityUnitLabel = () => {
+    switch (formData.pricingUnit) {
+      case 'per_person': return 'guests';
+      case 'per_hour':   return 'hours';
+      case 'per_day':    return 'days';
+      case 'per_event':  return 'events';
+      case 'per_item':   return 'pieces';
+      default:           return 'units';
+    }
+  };
+
   const renderStep2 = () => (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <h2 className="text-xl font-extrabold text-[var(--color-dark)] border-b border-gray-100 pb-4">Details & Capacity</h2>
       
       <div>
-        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Max Capacity (Guests)</label>
+        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+          Max Capacity ({getCapacityUnitLabel()})
+        </label>
         <input type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: e.target.value })} placeholder="e.g., 500 (Leave blank if not applicable)" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] text-sm" />
       </div>
 
@@ -502,9 +513,9 @@ function VendorServiceForm() {
   );
 
   const renderSummary = () => {
-    const finalPricingUnit = formData.pricingUnit === 'other'
-      ? `per ${formData.customPricingUnit}`
-      : formData.pricingUnit.replace('_', ' ');
+    let finalPricingUnit = formData.pricingUnit.replace('_', ' ');
+    if (formData.pricingUnit === 'per_item') finalPricingUnit = 'per piece';
+    if (formData.pricingUnit === 'per_person') finalPricingUnit = 'per guest';
     
     return (
       <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -529,7 +540,7 @@ function VendorServiceForm() {
             
             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-1.5"><MapPin size={16} className="text-gray-400" /> {formData.city}</div>
-              {formData.capacity && <div className="flex items-center gap-1.5"><Users size={16} className="text-gray-400" /> Up to {formData.capacity} guests</div>}
+              {formData.capacity && <div className="flex items-center gap-1.5"><Users size={16} className="text-gray-400" /> Up to {formData.capacity} {getCapacityUnitLabel()}</div>}
               <div className="flex items-center gap-1.5">
                 <div className={`w-2.5 h-2.5 rounded-full ${formData.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                 {formData.isActive ? 'Active Listing' : 'Inactive Listing'}

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, ChevronLeft, X, Star, MapPin, Users, Store, Calendar, ShoppingCart, CreditCard, Phone, MessageCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, Star, MapPin, Users, Store, Calendar, ShoppingCart, CreditCard, Phone, MessageCircle, Loader2, Plus, ArrowRight, ArrowLeft, Package } from 'lucide-react';
 import ServiceCard from '../../components/Home/ServiceCard';
 import useAuthStore from '../../store/authStore';
 import { getServiceById } from '../../services/services.service';
 import { getServiceReviews, postReview, checkReviewEligibility } from '../../services/reviews.service';
+import * as bookingsService from '../../services/bookings.service';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 // ─────────────────────────────────────────────────────────────
 //  ReviewsSection — Reviews summary + write a review form
@@ -91,90 +93,104 @@ function ReviewsSection({
         Reviews
       </h2>
 
-      {/* ── Rating Summary Box ── */}
-      <div className="flex flex-wrap items-center gap-8 mb-10 p-6 sm:p-8 rounded-2xl border border-[#E8C97A44] bg-gradient-to-br from-[#FDF6EC] to-[#FFF9F0]">
-        
-        {/* Big average number */}
-        <div className="flex flex-col items-center min-w-[80px]">
-          <span className="text-6xl font-black text-[var(--color-dark)] leading-none">
-            {avgRating.toFixed(1)}
-          </span>
-          <div className="flex gap-0.5 my-2">
-            {[1,2,3,4,5].map(s => (
-              <Star
-                key={s} size={16}
-                fill={s <= Math.round(avgRating) ? 'var(--color-gold)' : 'none'}
-                color={s <= Math.round(avgRating) ? 'var(--color-gold)' : '#d1d5db'}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-gray-500">{totalReviews} reviews</span>
-        </div>
-
-        {/* Bar chart breakdown */}
-        <div className="flex-1 min-w-[200px] flex flex-col gap-2">
-          {breakdown.map(({ rating: stars, count, percentage }) => (
-            <div key={stars} className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700 w-7">
-                {stars}★
+      {totalReviews > 0 ? (
+        <>
+          {/* ── Rating Summary Box ── */}
+          <div className="flex flex-wrap items-center gap-8 mb-10 p-6 sm:p-8 rounded-2xl border border-[#E8C97A44] bg-gradient-to-br from-[#FDF6EC] to-[#FFF9F0]">
+            
+            {/* Big average number */}
+            <div className="flex flex-col items-center min-w-[80px]">
+              <span className="text-6xl font-black text-[var(--color-dark)] leading-none">
+                {avgRating.toFixed(1)}
               </span>
-              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#E8C97A] to-[#C9A24D] transition-all duration-700"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 w-9">{percentage}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Individual Review Cards ── */}
-      <div className="flex flex-col gap-4 mb-10">
-        {reviews.slice(0, 3).map((review) => (
-          <div
-            key={review.review_id}
-            className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
-          >
-            {/* Reviewer header */}
-            <div className="flex items-center gap-3 mb-3">
-              <img
-                src={review.reviewer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.reviewer_name || 'User')}&background=E8C97A&color=fff`}
-                alt={review.reviewer_name}
-                className="w-11 h-11 rounded-full object-cover shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-[15px] text-[var(--color-dark)] truncate">
-                  {review.reviewer_name || 'Anonymous'}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-              <div className="flex gap-0.5 shrink-0">
+              <div className="flex gap-0.5 my-2">
                 {[1,2,3,4,5].map(s => (
                   <Star
-                    key={s} size={13}
-                    fill={s <= review.rating ? 'var(--color-gold)' : 'none'}
-                    color={s <= review.rating ? 'var(--color-gold)' : '#d1d5db'}
+                    key={s} size={16}
+                    fill={s <= Math.round(avgRating) ? 'var(--color-gold)' : 'none'}
+                    color={s <= Math.round(avgRating) ? 'var(--color-gold)' : '#d1d5db'}
                   />
                 ))}
               </div>
+              <span className="text-xs text-gray-500">{totalReviews} reviews</span>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">{review.review_text}</p>
+
+            {/* Bar chart breakdown */}
+            <div className="flex-1 min-w-[200px] flex flex-col gap-2">
+              {breakdown.map(({ rating: stars, count, percentage }) => (
+                <div key={stars} className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700 w-7">
+                    {stars}★
+                  </span>
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#E8C97A] to-[#C9A24D] transition-all duration-700"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 w-9">{percentage}%</span>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-        {reviews.length > 3 && (
-          <button
-            type="button"
-            onClick={() => setShowAllModal(true)}
-            className="block mx-auto w-max px-10 py-3.5 mt-1 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] transition-all duration-200 bg-white"
-          >
-            Show all {reviews.length} reviews →
-          </button>
-        )}
-      </div>
+
+          {/* ── Individual Review Cards ── */}
+          <div className="flex flex-col gap-4 mb-10">
+            {reviews.slice(0, 3).map((review) => (
+              <div
+                key={review.review_id}
+                className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                {/* Reviewer header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <img
+                    src={review.reviewer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.reviewer_name || 'User')}&background=E8C97A&color=fff`}
+                    alt={review.reviewer_name}
+                    className="w-11 h-11 rounded-full object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[15px] text-[var(--color-dark)] truncate">
+                      {review.reviewer_name || 'Anonymous'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex gap-0.5 shrink-0">
+                    {[1,2,3,4,5].map(s => (
+                      <Star
+                        key={s} size={13}
+                        fill={s <= review.rating ? 'var(--color-gold)' : 'none'}
+                        color={s <= review.rating ? 'var(--color-gold)' : '#d1d5db'}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">{review.review_text}</p>
+              </div>
+            ))}
+            {reviews.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllModal(true)}
+                className="block mx-auto w-max px-10 py-3.5 mt-1 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-600 hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] transition-all duration-200 bg-white"
+              >
+                Show all {reviews.length} reviews →
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-10 mb-10 text-center bg-gray-50 rounded-2xl border border-gray-100">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+            <Star size={24} className="text-gray-300" />
+          </div>
+          <h3 className="text-lg font-bold text-[var(--color-dark)] mb-1">No reviews yet</h3>
+          <p className="text-sm text-gray-500 max-w-sm">
+            Be the first to share your experience with this service!
+          </p>
+        </div>
+      )}
 
       {/* ── Write a Review ── */}
 
@@ -249,20 +265,27 @@ function ReviewsSection({
                     <button
                       key={s}
                       type="button"
-                      onClick={() => setUserRating(s)}
-                      onMouseEnter={() => setHoverStar(s)}
+                      onClick={(e) => {
+                        const { left, width } = e.currentTarget.getBoundingClientRect();
+                        setUserRating((e.clientX - left) < (width / 2) ? s - 0.5 : s);
+                      }}
+                      onMouseMove={(e) => {
+                        const { left, width } = e.currentTarget.getBoundingClientRect();
+                        setHoverStar((e.clientX - left) < (width / 2) ? s - 0.5 : s);
+                      }}
                       onMouseLeave={() => setHoverStar(0)}
-                      className="p-0.5 bg-transparent border-none cursor-pointer transition-transform duration-150"
+                      className="relative p-0.5 bg-transparent border-none cursor-pointer transition-transform duration-150"
                       style={{
-                        transform: (hoverStar || userRating) >= s
-                          ? 'scale(1.25)' : 'scale(1)',
+                        transform: (hoverStar || userRating) >= s - 0.5 ? 'scale(1.25)' : 'scale(1)',
                       }}
                     >
-                      <Star
-                        size={30}
-                        fill={(hoverStar || userRating) >= s ? 'var(--color-gold)' : 'none'}
-                        color={(hoverStar || userRating) >= s ? 'var(--color-gold)' : '#d1d5db'}
-                      />
+                      <Star size={30} fill="none" color="#d1d5db" />
+                      <div 
+                        className="absolute top-[2px] left-[2px] overflow-hidden pointer-events-none" 
+                        style={{ width: (hoverStar || userRating) >= s ? '100%' : (hoverStar || userRating) === s - 0.5 ? '50%' : '0%' }}
+                      >
+                        <Star size={30} fill="var(--color-gold)" color="var(--color-gold)" />
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -530,13 +553,26 @@ function ServiceDetail() {
   const queryClient   = useQueryClient();
 
   // Auth state
-  const user = useAuthStore((s) => s.user);
+  const user       = useAuthStore((s) => s.user);
   const isLoggedIn = !!user;
+  const isCustomer = user?.role === 'customer';
 
-  // Always scroll to top when opening a service detail page
+  const location      = useLocation();
+
+  // Handle scroll to top OR scroll to hash if present
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [serviceId]);
+    if (location.hash) {
+      setTimeout(() => {
+        const id = location.hash.replace('#', '');
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [serviceId, location.hash]);
 
   // ── State: image gallery ────────────────────────────────────
   const [activeIndex, setActiveIndex] = useState(0);
@@ -546,10 +582,25 @@ function ServiceDetail() {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // ── State: booking form ─────────────────────────────────────
-  const [selectedDate, setSelectedDate] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [specialRequests, setSpecialRequests] = useState('');
+  // ── State: booking sidebar form ────────────────────────────
+  const [selectedDate,     setSelectedDate]     = useState('');
+  const [quantity,         setQuantity]         = useState(1);
+  const [specialRequests,  setSpecialRequests]  = useState('');
+
+  // ── State: Add-to-Cart modal ────────────────────────────────
+  const [showCartModal,   setShowCartModal]   = useState(false);
+  const [cartModalStep,   setCartModalStep]   = useState(1);
+  const [cartModalData,   setCartModalData]   = useState({
+    event_date: '', quantity: '1', special_requests: '', payment_method: 'full_online',
+  });
+  const [cartModalErrors, setCartModalErrors] = useState({});
+
+  // ── State: Book Now modal ───────────────────────────────────
+  const [showBookNowModal,   setShowBookNowModal]   = useState(false);
+  const [bookNowData,        setBookNowData]        = useState({
+    event_date: '', quantity: '1', special_requests: '', payment_method: 'full_online',
+  });
+  const [bookNowErrors,      setBookNowErrors]      = useState({});
 
   // ── State: review form ──────────────────────────────────────
   // Note: 'submitted' success state is managed inside ReviewsSection itself.
@@ -608,7 +659,151 @@ function ServiceDetail() {
   const canReview   = eligibilityData?.canReview   ?? false;
   const hasReviewed = eligibilityData?.hasReviewed ?? false;
 
-  // ── React Query v5: submit review mutation ──────────────────
+  // ── Query: customer's active draft plans (for Add to Cart) ──
+  const { data: plansData } = useQuery({
+    queryKey: ['my-event-plans', 'draft'],
+    queryFn:  () => bookingsService.getMyEventPlans({ status: 'draft' }),
+    enabled:  isCustomer,
+    staleTime: 1000 * 60,
+  });
+  const draftPlans     = plansData?.data?.plans ?? [];
+  const activeDraftPlan = draftPlans[0] ?? null;
+
+  // ── Validation helper ───────────────────────────────────────
+  const validateBookingForm = (data, setErrors) => {
+    const errors = {};
+    if (!data.event_date) {
+      errors.event_date = 'Event date is required.';
+    } else if (new Date(data.event_date) <= new Date()) {
+      errors.event_date = 'Event date must be in the future.';
+    }
+    if (!data.payment_method) {
+      errors.payment_method = 'Please select a payment method.';
+    }
+    setErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ── Mutation: Add to Cart ───────────────────────────────────
+  const addToCartMutation = useMutation({
+    mutationFn: async (itemData) => {
+      let planId = itemData.plan_id;
+      if (planId === 'new' || !planId) {
+        const createRes = await bookingsService.createEventPlan({
+          name: itemData.new_plan_name?.trim() || 'My Custom Event',
+        });
+        planId = createRes.data.plan.event_id;
+      }
+      return bookingsService.addItemToEventPlan(planId, {
+        service_id:       service.service_id,
+        event_date:       itemData.event_date,
+        payment_method:   itemData.payment_method,
+        // guest_count is only semantically meaningful for per_person services
+        guest_count:      service.pricing_unit === 'per_person' ? parseInt(itemData.quantity) || 1 : undefined,
+        special_requests: itemData.special_requests || undefined,
+        quantity:         service.pricing_unit === 'per_event' ? 1 : (parseInt(itemData.quantity) || 1),
+      });
+    },
+    onSuccess: () => {
+      setShowCartModal(false);
+      setCartModalData({ event_date: '', guest_count: '', special_requests: '', payment_method: 'full_online' });
+      setCartModalErrors({});
+      queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+      toastSuccess('Added to your event plan! View it in My Events.');
+    },
+    onError: (err) => {
+      if (err.response?.status === 409) {
+        toastError('This service is already in your current plan.');
+      } else {
+        toastError(err.response?.data?.error ?? 'Failed to add to cart. Please try again.');
+      }
+    },
+  });
+
+  // ── Mutation: Book Now (direct booking) ─────────────────────
+  const bookNowMutation = useMutation({
+    mutationFn: (data) => bookingsService.createBooking({
+      service_id:       service.service_id,
+      event_date:       data.event_date,
+      payment_method:   data.payment_method,
+      guest_count:      service.pricing_unit === 'per_person' ? parseInt(data.quantity) || 1 : undefined,
+      special_requests: data.special_requests || undefined,
+      quantity:         service.pricing_unit === 'per_event' ? 1 : (parseInt(data.quantity) || 1),
+    }),
+    onSuccess: () => {
+      setShowBookNowModal(false);
+      setBookNowData({ event_date: '', quantity: '1', special_requests: '', payment_method: 'full_online' });
+      setBookNowErrors({});
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-event-plans'] });
+      toastSuccess('Booking confirmed! The vendor will respond shortly.');
+      navigate('/customer/bookings');
+    },
+    onError: (err) => {
+      toastError(err.response?.data?.error ?? 'Booking failed. Please try again.');
+    },
+  });
+
+  // ── Button handlers ─────────────────────────────────────────
+  const handleAddToCart = () => {
+    if (!isLoggedIn) { toastError('Please log in to add services to your cart.'); navigate('/login'); return; }
+    if (!isCustomer)  { toastError('Only customers can add services to cart.'); return; }
+    // Pre-fill modal with sidebar values if already set
+    setCartModalData({
+      plan_id:          draftPlans.length > 0 ? draftPlans[0].event_id : 'new',
+      new_plan_name:    '',
+      event_date:       '',
+      quantity:         service?.pricing_unit === 'per_event' ? '1' : '1',
+      special_requests: '',
+      payment_method:   'full_online',
+    });
+    setCartModalErrors({});
+    setCartModalStep(1);
+    setShowCartModal(true);
+  };
+
+  const handleBookNow = () => {
+    if (!isLoggedIn) { toastError('Please log in to book a service.'); navigate('/login'); return; }
+    if (!isCustomer)  { toastError('Only customers can book services.'); return; }
+    // Pre-fill modal with sidebar values if already set
+    setBookNowData({
+      event_date:       '',
+      quantity:         service?.pricing_unit === 'per_event' ? '1' : '1',
+      special_requests: '',
+      payment_method:   'full_online',
+    });
+    setBookNowErrors({});
+    setShowBookNowModal(true);
+  };
+
+  const handleCartModalSubmit = () => {
+    if (!validateBookingForm(cartModalData, setCartModalErrors)) return;
+    if (cartModalData.plan_id === 'new' && !cartModalData.new_plan_name?.trim()) {
+      setCartModalErrors(e => ({ ...e, new_plan_name: 'Please enter a name for your new plan.' }));
+      return;
+    }
+    // Validate quantity
+    const qty = parseInt(cartModalData.quantity) || 1;
+    const cap = service?.capacity ? parseInt(service.capacity) : null;
+    if (cap && qty > cap) {
+      setCartModalErrors(e => ({ ...e, quantity: `Maximum is ${cap.toLocaleString()} ${getQuantityConfig(service?.pricing_unit).unit}` }));
+      return;
+    }
+    addToCartMutation.mutate(cartModalData);
+  };
+
+  const handleBookNowSubmit = () => {
+    if (!validateBookingForm(bookNowData, setBookNowErrors)) return;
+    // Validate quantity
+    const qty = parseInt(bookNowData.quantity) || 1;
+    const cap = service?.capacity ? parseInt(service.capacity) : null;
+    if (cap && qty > cap) {
+      setBookNowErrors(e => ({ ...e, quantity: `Maximum is ${cap.toLocaleString()} ${getQuantityConfig(service?.pricing_unit).unit}` }));
+      return;
+    }
+    bookNowMutation.mutate(bookNowData);
+  };
+
   const submitReviewMutation = useMutation({
     mutationFn: (reviewData) => postReview(serviceId, reviewData),
     onSuccess: () => {
@@ -643,9 +838,10 @@ function ServiceDetail() {
   const nextImage = () => setActiveIndex((prev) => (prev + 1) % Math.max(1, imageUrls.length));
   const prevImage = () => setActiveIndex((prev) => (prev - 1 + Math.max(1, imageUrls.length)) % Math.max(1, imageUrls.length));
 
-  // Stop body scroll when lightbox is open
+  // Stop body scroll when lightbox or modals are open
   useEffect(() => {
-    if (isLightboxOpen) {
+    const isOverlayOpen = isLightboxOpen || showCartModal || showBookNowModal;
+    if (isOverlayOpen) {
       document.body.style.overflow = 'hidden';
       document.querySelector('nav')?.style.setProperty('display','none');
       document.querySelector('header')?.style.setProperty('display','none');
@@ -659,7 +855,7 @@ function ServiceDetail() {
       document.querySelector('nav')?.style.removeProperty('display');
       document.querySelector('header')?.style.removeProperty('display');
     };
-  }, [isLightboxOpen]);
+  }, [isLightboxOpen, showCartModal, showBookNowModal]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -714,14 +910,38 @@ function ServiceDetail() {
     ? parseFloat(service.base_price)
     : parseFloat(service.base_price) * quantity;
 
+  // ── Quantity config: adapts to the service's pricing_unit ───
+  // This drives both the label shown in the modal AND the validation max.
+  const getQuantityConfig = (pricingUnit) => {
+    switch (pricingUnit) {
+      case 'per_person': return { label: 'Number of Guests',  unit: 'guests',  placeholder: 'e.g. 150' };
+      case 'per_hour':   return { label: 'Number of Hours',   unit: 'hours',   placeholder: 'e.g. 3' };
+      case 'per_day':    return { label: 'Number of Days',    unit: 'days',    placeholder: 'e.g. 2' };
+      case 'per_item':   return { label: 'Number of Pieces',  unit: 'pieces',  placeholder: 'e.g. 10' };
+      case 'per_event':  return { label: 'Events',            unit: 'event',   placeholder: '1' };
+      default: {
+        // Custom unit: vendor wrote e.g. "per_table", "per_plate", etc.
+        // Strip "per_" prefix and make it human-readable
+        const raw = pricingUnit?.replace(/^per_/, '') ?? 'unit';
+        const humanized = raw.replace(/_/g, ' ');
+        return { label: `Number of ${humanized}s`, unit: humanized, placeholder: 'e.g. 1' };
+      }
+    }
+  };
+
   const getUnitLabels = (unit) => {
+    // For sidebar "/ unit" label and price breakdown
     switch(unit) {
       case 'per_person': return { inputLabel: 'GUESTS',   mathLabel: 'guests' };
       case 'per_hour':   return { inputLabel: 'HOURS',    mathLabel: 'hours'  };
       case 'per_day':    return { inputLabel: 'DAYS',     mathLabel: 'days'   };
-      case 'per_item':   return { inputLabel: 'QUANTITY', mathLabel: 'items'  };
+      case 'per_item':   return { inputLabel: 'PIECES',   mathLabel: 'pieces' };
       case 'per_event':  return { inputLabel: 'EVENT',    mathLabel: 'event'  };
-      default:           return { inputLabel: 'QUANTITY', mathLabel: 'units'  };
+      default: {
+        // Custom unit: show raw unit name
+        const raw = unit?.replace(/^per_/, '') ?? 'unit';
+        return { inputLabel: raw.toUpperCase(), mathLabel: raw };
+      }
     }
   };
   const { inputLabel, mathLabel } = getUnitLabels(service.pricing_unit);
@@ -840,19 +1060,21 @@ function ServiceDetail() {
                 </div>
 
                 {/* Rating */}
-                <div className="flex items-center gap-2">
-                  <Star size={18} className="text-[var(--color-gold)]" fill="currentColor" aria-hidden="true" />
-                  <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
-                  <a href="#reviews" className="text-gray-400 hover:text-[var(--color-dark)] hover:underline transition-colors ml-1">
-                    ({service.review_count} reviews)
-                  </a>
-                </div>
+                {totalReviews > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Star size={18} className="text-[var(--color-gold)]" fill="currentColor" aria-hidden="true" />
+                    <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
+                    <a href="#reviews" className="text-gray-400 hover:text-[var(--color-dark)] hover:underline transition-colors ml-1">
+                      ({totalReviews} reviews)
+                    </a>
+                  </div>
+                )}
 
                 {/* Capacity */}
                 {service.capacity && (
                   <div className="flex items-center gap-2">
                     <Users size={18} className="text-gray-400" aria-hidden="true" />
-                    <span>Up to {service.capacity} guests</span>
+                    <span>Up to {Number(service.capacity).toLocaleString()} {mathLabel}</span>
                   </div>
                 )}
               </div>
@@ -866,10 +1088,11 @@ function ServiceDetail() {
                     </div>
                   </Link>
                   <div className="flex flex-col">
-                    <h2 className="text-lg font-bold text-[var(--color-dark)]">
-                      Hosted by <Link to={`/vendors/${service.vendor?.vendor_id}`} className="hover:underline">{service.vendor?.name ?? ''}</Link>
-                    </h2>
-                    <span className="text-sm text-gray-500">Verified Vendor · {service.vendor?.city ?? ''}</span>
+                    <span className="text-sm font-medium text-gray-500 mb-0.5">Hosted by</span>
+                    <Link to={`/vendors/${service.vendor?.vendor_id}`} className="text-xl font-extrabold text-[var(--color-dark)] hover:text-[var(--color-gold)] transition-colors leading-tight">
+                      {service.vendor?.name ?? ''}
+                    </Link>
+                    <span className="text-sm text-gray-500 mt-1">Verified Vendor · {service.vendor?.city ?? ''}</span>
                   </div>
                 </div>
                 <button className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-[var(--color-dark)] hover:border-[var(--color-gold)] hover:text-[var(--color-gold)] transition-all flex items-center gap-2 shadow-sm">
@@ -894,72 +1117,77 @@ function ServiceDetail() {
           {/* Right Column - Booking Sidebar (approx 35%) */}
           <div className="lg:col-span-4">
             <div id="booking" className="sticky top-24 bg-white p-6 sm:p-8 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col gap-6">
-              {/* Header Row */}
-              <div className="flex justify-between items-end">
+
+              {/* Price + Rating Row */}
+              <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-2xl font-extrabold text-[var(--color-dark)]">{parseFloat(service.base_price || 0).toLocaleString()} JOD</span>
-                  <span className="text-gray-500 font-medium text-sm"> / {mathLabel}</span>
+                  <span className="text-3xl font-extrabold text-[var(--color-dark)]">{parseFloat(service.base_price || 0).toLocaleString()} JOD</span>
+                  <span className="text-gray-400 font-medium text-sm ml-1">/ {mathLabel}</span>
                 </div>
-                <div className="flex items-center gap-1 text-sm font-bold text-[var(--color-dark)] mb-1">
-                  <Star size={14} className="text-[var(--color-gold)]" fill="currentColor" />
-                  <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
-                  <span className="text-gray-500 font-normal underline">({service.review_count})</span>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <hr className="border-gray-100" />
-
-              {/* The Unified Input Box */}
-              <div className="border border-gray-300 rounded-xl overflow-hidden mb-1">
-                <div className="p-3 border-b border-gray-300">
-                  <label className="block text-[10px] font-bold text-gray-800 uppercase tracking-wider">Event Date</label>
-                  <input type="date" className="w-full mt-1 text-sm outline-none text-gray-700 bg-transparent" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-                </div>
-                {!isFixedPrice && (
-                  <div className="p-3">
-                    <label className="block text-[10px] font-bold text-gray-800 uppercase tracking-wider">{inputLabel}</label>
-                    <input type="number" min="1" className="w-full mt-1 text-sm outline-none text-gray-700 bg-transparent" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+                {totalReviews > 0 && (
+                  <div className="flex items-center gap-1 text-sm font-bold text-[var(--color-dark)] mt-1">
+                    <Star size={14} className="text-[var(--color-gold)]" fill="currentColor" />
+                    <span>{parseFloat(service.avg_rating || 0).toFixed(1)}</span>
+                    <a href="#reviews" className="text-gray-400 font-normal hover:text-[var(--color-dark)] hover:underline transition-colors">
+                      ({totalReviews})
+                    </a>
                   </div>
                 )}
               </div>
 
-              {/* Special Requests */}
-              <textarea 
-                rows="2" 
-                placeholder="Special requests (optional)" 
-                className="w-full p-3 text-sm border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:border-transparent transition-all resize-none" 
-                value={specialRequests} 
-                onChange={(e) => setSpecialRequests(e.target.value)} 
-              />
+              <hr className="border-gray-100" />
+
+              {/* What's included hint */}
+              <div className="flex flex-col gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span> No upfront charge
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span> Vendor responds within 24h
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500 font-bold">✓</span> Free cancellation on draft plans
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3">
-                <button className="w-full bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] text-white font-bold py-3.5 rounded-xl shadow-[0_4px_14px_rgba(201,162,77,0.3)] flex items-center justify-center gap-2 transition-all">
-                  <ShoppingCart size={18} /> Add to Cart
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addToCartMutation.isPending}
+                  className="w-full bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_rgba(201,162,77,0.3)] flex items-center justify-center gap-2 transition-all disabled:opacity-70 text-base">
+                  {addToCartMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <ShoppingCart size={18} />}
+                  Add to Cart
                 </button>
-                <button className="w-full bg-[var(--color-dark)] hover:bg-[#1a1a1a] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all">
-                  <CreditCard size={18} /> Book Now
+                <button
+                  onClick={handleBookNow}
+                  disabled={bookNowMutation.isPending}
+                  className="w-full bg-[var(--color-dark)] hover:bg-[#1a1a1a] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-70 text-base">
+                  {bookNowMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <CreditCard size={18} />}
+                  Book Now
                 </button>
-                <p className="text-center text-xs text-gray-500 mt-1">You won't be charged yet</p>
+                <p className="text-center text-xs text-gray-400">You won't be charged yet</p>
               </div>
 
-              {/* Live Price Breakdown */}
-              <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600">
+              {/* Static Price Breakdown */}
+              <div className="flex flex-col gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-4">
                 <div className="flex justify-between">
-                  <span>{parseFloat(service.base_price || 0).toLocaleString()} JOD x {quantity} {mathLabel}</span>
-                  <span>{(isNaN(totalPrice) ? 0 : totalPrice).toLocaleString()} JOD</span>
+                  <span>{parseFloat(service.base_price || 0).toLocaleString()} JOD × 1 {mathLabel}</span>
+                  <span className="text-[var(--color-dark)] font-semibold">{parseFloat(service.base_price || 0).toLocaleString()} JOD</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Service Fee</span>
-                  <span>Included</span>
+                  <span className="text-green-600 font-semibold">Included</span>
                 </div>
-                <hr className="border-gray-200" />
-                <div className="flex justify-between text-base font-extrabold text-[var(--color-dark)]">
+                <hr className="border-gray-200 my-1" />
+                <div className="flex justify-between font-extrabold text-[var(--color-dark)] text-base">
                   <span>Total</span>
-                  <span>{(isNaN(totalPrice) ? 0 : totalPrice).toLocaleString()} JOD</span>
+                  <span>{parseFloat(service.base_price || 0).toLocaleString()} JOD</span>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -1101,6 +1329,346 @@ function ServiceDetail() {
                 <img src={img} alt={`Lightbox Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Add to Cart Modal ───────────────────────────────── */}
+      {showCartModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowCartModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {cartModalStep === 1 ? (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-extrabold text-[var(--color-dark)]">Choose Event Plan</h3>
+                  <button onClick={() => setShowCartModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6 max-h-[300px] overflow-y-auto p-1">
+                  {draftPlans.map(plan => (
+                    <button
+                      key={plan.event_id}
+                      onClick={() => {
+                        setCartModalData(d => ({ ...d, plan_id: plan.event_id, new_plan_name: '' }));
+                        setCartModalErrors(er => ({ ...er, new_plan_name: '' }));
+                      }}
+                      className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-center min-h-[90px] ${cartModalData.plan_id === plan.event_id ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/5' : 'border-gray-200 hover:border-[var(--color-gold)]/30'}`}
+                    >
+                      <span className="font-bold text-sm text-[var(--color-dark)] truncate w-full">{plan.name}</span>
+                      <span className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide font-semibold">{plan.event_type_name || 'Event'}</span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCartModalData(d => ({ ...d, plan_id: 'new' }))}
+                    className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col items-center justify-center min-h-[90px] gap-2 ${cartModalData.plan_id === 'new' ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/5' : 'border-dashed border-gray-300 hover:border-[var(--color-gold)]/30'}`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${cartModalData.plan_id === 'new' ? 'bg-[var(--color-gold)] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <Plus size={16} />
+                    </div>
+                    <span className={`font-bold text-sm ${cartModalData.plan_id === 'new' ? 'text-[var(--color-gold)]' : 'text-gray-500'}`}>Create New</span>
+                  </button>
+                </div>
+
+                {cartModalData.plan_id === 'new' && (
+                  <div className="mb-6 animate-in fade-in slide-in-from-top-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">New Plan Name <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      placeholder="e.g. My Party, My Event..."
+                      value={cartModalData.new_plan_name}
+                      onChange={(e) => {
+                        setCartModalData(d => ({ ...d, new_plan_name: e.target.value }));
+                        setCartModalErrors(er => ({ ...er, new_plan_name: '' }));
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] transition-all ${cartModalErrors.new_plan_name ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                    />
+                    {cartModalErrors.new_plan_name && <p className="text-xs text-red-500 font-semibold mt-1">{cartModalErrors.new_plan_name}</p>}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (cartModalData.plan_id === 'new' && !cartModalData.new_plan_name.trim()) {
+                      setCartModalErrors(e => ({ ...e, new_plan_name: 'Please enter a name for your new plan.' }));
+                      return;
+                    }
+                    setCartModalStep(2);
+                  }}
+                  className="w-full px-4 py-3.5 bg-[var(--color-gold)] text-white font-bold rounded-xl hover:bg-[var(--color-gold-dark)] transition-colors flex items-center justify-center gap-2"
+                >
+                  Continue <ArrowRight size={18} />
+                </button>
+              </>
+            ) : (
+              <>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCartModalStep(1)} className="text-gray-400 hover:text-[var(--color-dark)] transition-colors"><ArrowLeft size={20} /></button>
+                <h3 className="text-xl font-extrabold text-[var(--color-dark)]">Service Details</h3>
+              </div>
+              <button onClick={() => setShowCartModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6 pl-7">{service?.title}</p>
+            
+            <div className="mb-5 px-4 py-3 bg-[var(--color-gold)]/5 border border-[var(--color-gold)]/20 rounded-xl flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--color-gold)]/20 flex items-center justify-center text-[var(--color-gold)] shrink-0">
+                <Package size={16} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Adding to Plan:</p>
+                <p className="text-sm font-bold text-[var(--color-dark)]">
+                  {cartModalData.plan_id === 'new' ? cartModalData.new_plan_name : draftPlans.find(p => p.event_id === cartModalData.plan_id)?.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Event Date */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Event Date <span className="text-red-500">*</span></label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={cartModalData.event_date}
+                onChange={(e) => { setCartModalData(d => ({ ...d, event_date: e.target.value })); setCartModalErrors(er => ({ ...er, event_date: '' })); }}
+                className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] transition-all ${cartModalErrors.event_date ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+              />
+              {cartModalErrors.event_date && <p className="text-xs text-red-500 font-semibold mt-1">{cartModalErrors.event_date}</p>}
+            </div>
+
+            {/* Smart Quantity Field — adapts to pricing_unit */}
+            {!isFixedPrice ? (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-bold text-gray-700">
+                    {getQuantityConfig(service?.pricing_unit).label}
+                    <span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  {service?.capacity && (
+                    <span className="text-xs text-gray-400">Max: {Number(service.capacity).toLocaleString()}</span>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  max={service?.capacity || undefined}
+                  placeholder={getQuantityConfig(service?.pricing_unit).placeholder}
+                  value={cartModalData.quantity}
+                  onChange={(e) => {
+                    setCartModalData(d => ({ ...d, quantity: e.target.value }));
+                    setCartModalErrors(er => ({ ...er, quantity: '' }));
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] transition-all ${
+                    cartModalErrors.quantity ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                  }`}
+                />
+                {cartModalErrors.quantity && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{cartModalErrors.quantity}</p>
+                )}
+              </div>
+            ) : (
+              /* per_event: locked to 1, no input shown */
+              <div className="mb-4 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Quantity</span>
+                <span className="text-sm font-bold text-[var(--color-dark)]">1 event (fixed)</span>
+              </div>
+            )}
+
+            {/* Special Requests */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Special Requests <span className="text-gray-400 font-normal ml-1">(optional)</span></label>
+              <textarea rows={2} placeholder="Any special requirements..." value={cartModalData.special_requests}
+                onChange={(e) => setCartModalData(d => ({ ...d, special_requests: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] resize-none transition-all text-sm" />
+            </div>
+
+            {/* Payment Method */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Payment Method <span className="text-red-500">*</span></label>
+              <div className="grid grid-cols-2 gap-3">
+                {[{ value: 'full_online', label: '💳 Full Online', desc: '100% paid now · Escrow protected' }, { value: 'cash_deposit', label: '💰 Cash + Deposit', desc: '20% now · 80% cash on event day' }].map(opt => (
+                  <button key={opt.value} type="button" onClick={() => setCartModalData(d => ({ ...d, payment_method: opt.value }))}
+                    className={`p-3 rounded-xl border-2 text-left transition-all text-sm ${cartModalData.payment_method === opt.value ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="font-bold text-[var(--color-dark)]">{opt.label}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Price Summary */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  {Number(service?.base_price ?? 0).toLocaleString()} JOD
+                  {!isFixedPrice && ` × ${parseInt(cartModalData.quantity) || 1} ${getQuantityConfig(service?.pricing_unit).unit}`}
+                </span>
+                <span className="font-extrabold text-[var(--color-dark)]">
+                  {(
+                    isFixedPrice
+                      ? Number(service?.base_price ?? 0)
+                      : Number(service?.base_price ?? 0) * (parseInt(cartModalData.quantity) || 1)
+                  ).toLocaleString()} JOD
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {service?.pricing_unit === 'per_item' ? 'per piece' : service?.pricing_unit === 'per_person' ? 'per guest' : service?.pricing_unit?.replace(/_/g, ' ')}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setCartModalStep(1)}
+                className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                Back
+              </button>
+              <button type="button" onClick={handleCartModalSubmit} disabled={addToCartMutation.isPending}
+                className="flex-1 px-4 py-3 bg-[var(--color-gold)] text-white font-bold rounded-xl hover:bg-[var(--color-gold-dark)] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(201,162,77,0.3)]">
+                {addToCartMutation.isPending ? <><Loader2 size={16} className="animate-spin" /> Adding...</> : <><ShoppingCart size={16} /> Add to Plan</>}
+              </button>
+            </div>
+            </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Book Now Modal ──────────────────────────────────── */}
+      {showBookNowModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowBookNowModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xl font-extrabold text-[var(--color-dark)]">Confirm Booking</h3>
+              <button onClick={() => setShowBookNowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">{service?.title}</p>
+
+            {/* Event Date */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Event Date <span className="text-red-500">*</span></label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={bookNowData.event_date}
+                onChange={(e) => { setBookNowData(d => ({ ...d, event_date: e.target.value })); setBookNowErrors(er => ({ ...er, event_date: '' })); }}
+                className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] transition-all ${bookNowErrors.event_date ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+              />
+              {bookNowErrors.event_date && <p className="text-xs text-red-500 font-semibold mt-1">{bookNowErrors.event_date}</p>}
+            </div>
+
+            {/* Smart Quantity Field — adapts to pricing_unit */}
+            {!isFixedPrice ? (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-bold text-gray-700">
+                    {getQuantityConfig(service?.pricing_unit).label}
+                    <span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  {service?.capacity && (
+                    <span className="text-xs text-gray-400">Max: {Number(service.capacity).toLocaleString()}</span>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  max={service?.capacity || undefined}
+                  placeholder={getQuantityConfig(service?.pricing_unit).placeholder}
+                  value={bookNowData.quantity}
+                  onChange={(e) => {
+                    setBookNowData(d => ({ ...d, quantity: e.target.value }));
+                    setBookNowErrors(er => ({ ...er, quantity: '' }));
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] transition-all ${
+                    bookNowErrors.quantity ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                  }`}
+                />
+                {bookNowErrors.quantity && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{bookNowErrors.quantity}</p>
+                )}
+              </div>
+            ) : (
+              <div className="mb-4 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Quantity</span>
+                <span className="text-sm font-bold text-[var(--color-dark)]">1 event (fixed)</span>
+              </div>
+            )}
+
+            {/* Special Requests */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Special Requests <span className="text-gray-400 font-normal ml-1">(optional)</span></label>
+              <textarea rows={2} placeholder="Any special requirements..." value={bookNowData.special_requests}
+                onChange={(e) => setBookNowData(d => ({ ...d, special_requests: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[var(--color-gold)] resize-none transition-all text-sm" />
+            </div>
+
+            {/* Payment Method */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Payment Method <span className="text-red-500">*</span></label>
+              <div className="grid grid-cols-2 gap-3">
+                {[{ value: 'full_online', label: '💳 Full Online', desc: '100% paid now · Escrow protected' }, { value: 'cash_deposit', label: '💰 Cash + Deposit', desc: '20% now · 80% cash on event day' }].map(opt => (
+                  <button key={opt.value} type="button" onClick={() => setBookNowData(d => ({ ...d, payment_method: opt.value }))}
+                    className={`p-3 rounded-xl border-2 text-left transition-all text-sm ${bookNowData.payment_method === opt.value ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="font-bold text-[var(--color-dark)]">{opt.label}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Price Summary */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  {Number(service?.base_price ?? 0).toLocaleString()} JOD
+                  {!isFixedPrice && ` × ${parseInt(bookNowData.quantity) || 1} ${getQuantityConfig(service?.pricing_unit).unit}`}
+                </span>
+                <span className="font-extrabold text-[var(--color-dark)]">
+                  {(
+                    isFixedPrice
+                      ? Number(service?.base_price ?? 0)
+                      : Number(service?.base_price ?? 0) * (parseInt(bookNowData.quantity) || 1)
+                  ).toLocaleString()} JOD
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {service?.pricing_unit === 'per_item' ? 'per piece' : service?.pricing_unit === 'per_person' ? 'per guest' : service?.pricing_unit?.replace(/_/g, ' ')}
+              </div>
+              {bookNowData.payment_method === 'cash_deposit' && (
+                <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between text-xs text-gray-500">
+                  <span>20% deposit due now</span>
+                  <span className="font-bold text-[var(--color-dark)]">
+                    {(
+                      (isFixedPrice
+                        ? Number(service?.base_price ?? 0)
+                        : Number(service?.base_price ?? 0) * (parseInt(bookNowData.quantity) || 1)
+                      ) * 0.2
+                    ).toLocaleString()} JOD
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setShowBookNowModal(false)}
+                className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:border-gray-300 transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={handleBookNowSubmit} disabled={bookNowMutation.isPending}
+                className="flex-1 px-4 py-3 bg-[var(--color-dark)] text-white font-bold rounded-xl hover:bg-[var(--color-dark)]/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                {bookNowMutation.isPending ? <><Loader2 size={16} className="animate-spin" /> Confirming...</> : 'Confirm Booking'}
+              </button>
+            </div>
           </div>
         </div>
       )}

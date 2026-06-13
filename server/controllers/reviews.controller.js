@@ -130,7 +130,7 @@ const createReview = async (req, res, next) => {
            (service_id, customer_id, event_item_id, rating, review_text)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [serviceId, customerId, qualifyingItemId, parseInt(rating), review_text]
+        [serviceId, customerId, qualifyingItemId, parseFloat(rating), review_text]
       );
       newReview = insertRes.rows[0];
 
@@ -333,7 +333,7 @@ const updateReview = async (req, res, next) => {
     const params  = [];
 
     if (rating !== undefined) {
-      params.push(parseInt(rating));
+      params.push(parseFloat(rating));
       updates.push(`rating = $${params.length}`);
     }
     if (review_text !== undefined) {

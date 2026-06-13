@@ -16,6 +16,28 @@ import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { useDebounce } from '../../hooks/useDebounce';
 import { getServices } from '../../services/services.service';
 
+// Simple Error Boundary for debugging
+class FilterErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 text-red-600 rounded-2xl h-full flex flex-col items-center justify-center text-center">
+          <h3 className="font-bold mb-2">Sidebar Error</h3>
+          <p className="text-xs break-words">{this.state.error?.message || 'Unknown error'}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────
@@ -244,14 +266,15 @@ const AllServicesSection = React.memo(function AllServicesSection({
     <div id="services-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* ── TWO-COLUMN LAYOUT ────────────────────────────── */}
-      <div className="flex gap-6 items-start">
+      <div className="flex gap-6 items-stretch">
 
         {/* ── LEFT COLUMN — Desktop sidebar with floating tab ── */}
         <div
           key="sidebar-wrapper"
-          className="hidden md:block relative shrink-0"
+          className="hidden md:block sticky top-[72px] shrink-0 z-10 self-start"
           style={{
             width:      sidebarOpen ? '260px' : '0px',
+            height:     'calc(100vh - 90px)',
             transition: 'width 300ms cubic-bezier(0.4,0,0.2,1)',
           }}
         >
@@ -300,8 +323,7 @@ const AllServicesSection = React.memo(function AllServicesSection({
           <aside
             className={[
               'flex flex-col',
-              'sticky top-[72px]',
-              'h-[calc(100vh-90px)] overflow-hidden',
+              'h-full overflow-hidden',
               'rounded-2xl border border-gray-100',
               'bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)]',
               'transition-[width,opacity] duration-300',
@@ -312,17 +334,19 @@ const AllServicesSection = React.memo(function AllServicesSection({
             aria-label="Filters panel"
             aria-hidden={!sidebarOpen}
           >
-            <FilterSidebar
-              key="stable-filter-sidebar"
-              filters={filters}
-              onChange={handleFilterChange}
-              onClear={handleClear}
-            />
+            <FilterErrorBoundary>
+              <FilterSidebar
+                key="stable-filter-sidebar"
+                filters={filters}
+                onChange={handleFilterChange}
+                onClear={handleClear}
+              />
+            </FilterErrorBoundary>
           </aside>
         </div>
 
         {/* ── RIGHT COLUMN — Sort bar + Results ──────────── */}
-        <main className="flex-1 min-w-0" aria-label="Services results">
+        <main className="flex-1 min-w-0" style={{ minHeight: 'calc(100vh + 400px)' }} aria-label="Services results">
 
           {/* ── SORT / CONTROL BAR ─────────────────────── */}
           <div

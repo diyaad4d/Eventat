@@ -123,9 +123,10 @@ function VendorDashboard() {
       barColor: '#10b981',
     },
     {
-      label:    'Total Revenue',
-      value:    kpis.total_revenue !== undefined ? Number(kpis.total_revenue).toLocaleString() : '—',
+      label:    'Total Revenue (Take-home)',
+      value:    kpis.total_revenue !== undefined ? Number(kpis.total_revenue * 0.90).toLocaleString() : '—',
       suffix:   ' JOD',
+      subLabel: kpis.total_revenue !== undefined ? `From ${Number(kpis.total_revenue).toLocaleString()} JOD total bookings` : '',
       trendPct: '',
       up:       true,
       icon:     <DollarSign size={22} />,
@@ -226,6 +227,7 @@ function VendorDashboard() {
                 <p className="text-3xl font-black text-[var(--color-dark)]">
                   {kpi.value}<span className="text-base font-medium text-gray-400">{kpi.suffix ? ' ' + kpi.suffix : ''}</span>
                 </p>
+                {kpi.subLabel && <p className="text-[10px] font-bold text-[var(--color-gold-dark)] mt-1">{kpi.subLabel}</p>}
               </div>
               {/* Mini sparkline */}
               <div className="flex items-end gap-0.5 h-8">

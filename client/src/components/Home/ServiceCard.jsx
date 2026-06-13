@@ -196,13 +196,17 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
         {/* Rating pill */}
 
-        <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
+        {reviewCount > 0 && (
 
-          <Star size={12} fill="var(--color-gold)" stroke="var(--color-gold)" strokeWidth={1.5} />
+          <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
 
-          <span className="text-[11px] font-bold text-[var(--color-dark)]">{rating.toFixed(1)}</span>
+            <Star size={12} fill="var(--color-gold)" stroke="var(--color-gold)" strokeWidth={1.5} />
 
-        </div>
+            <span className="text-[11px] font-bold text-[var(--color-dark)]">{rating.toFixed(1)}</span>
+
+          </div>
+
+        )}
 
       </Link>
 
@@ -278,13 +282,21 @@ function GridCard({ service, badgeVariant, unitLabel, className = '' }) {
 
           <div className="flex items-center justify-between">
 
-            <div className="flex items-center gap-1.5">
+            {reviewCount > 0 ? (
 
-              <StarDisplay rating={rating} />
+              <div className="flex items-center gap-1.5">
 
-              <span className="text-[11px] text-gray-400 font-medium">({reviewCount})</span>
+                <StarDisplay rating={rating} />
 
-            </div>
+                <span className="text-[11px] text-gray-400 font-medium">({reviewCount})</span>
+
+              </div>
+
+            ) : (
+
+              <span className="text-[11px] text-gray-400 font-medium italic">No reviews yet</span>
+
+            )}
 
             <div className="text-right">
 
@@ -464,15 +476,19 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
             {/* Rating pill — top right on list view */}
 
-            <div className="flex items-center gap-1.5 shrink-0 bg-[var(--color-gold)]/8 border border-[var(--color-gold)]/20 px-2.5 py-1 rounded-xl">
+            {reviewCount > 0 && (
 
-              <Star size={13} fill="var(--color-gold)" stroke="var(--color-gold)" strokeWidth={1.5} />
+              <div className="flex items-center gap-1.5 shrink-0 bg-[var(--color-gold)]/8 border border-[var(--color-gold)]/20 px-2.5 py-1 rounded-xl">
 
-              <span className="text-sm font-extrabold text-[var(--color-dark)]">{rating.toFixed(1)}</span>
+                <Star size={13} fill="var(--color-gold)" stroke="var(--color-gold)" strokeWidth={1.5} />
 
-              <span className="text-xs text-gray-400">({reviewCount})</span>
+                <span className="text-sm font-extrabold text-[var(--color-dark)]">{rating.toFixed(1)}</span>
 
-            </div>
+                <span className="text-xs text-gray-400">({reviewCount})</span>
+
+              </div>
+
+            )}
 
           </div>
 
@@ -536,13 +552,25 @@ function ListCard({ service, badgeVariant, unitLabel, className = '' }) {
 
           {/* Star row with review count */}
 
-          <div className="flex items-center gap-2 mt-1">
+          {reviewCount > 0 ? (
 
-            <StarDisplay rating={rating} size={14} />
+            <div className="flex items-center gap-2 mt-1">
 
-            <span className="text-xs text-gray-400">{reviewCount} reviews</span>
+              <StarDisplay rating={rating} size={14} />
 
-          </div>
+              <span className="text-xs text-gray-400">{reviewCount} reviews</span>
+
+            </div>
+
+          ) : (
+
+            <div className="flex items-center gap-2 mt-1">
+
+              <span className="text-xs text-gray-400 font-medium italic">No reviews yet</span>
+
+            </div>
+
+          )}
 
         </div>
 
@@ -637,16 +665,12 @@ function ServiceCard({ service, viewMode = 'grid', className = '' }) {
   const badgeVariant = CATEGORY_VARIANT_MAP[service.categorySlug] ?? 'gray';
 
   const unitLabel = {
-
     per_event:  '/ event',
-
     per_hour:   '/ hr',
-
-    per_person: '/ person',
-
+    per_person: '/ guest',
     per_day:    '/ day',
-
-  }[service.pricingUnit] ?? '/ event';
+    per_item:   '/ piece',
+  }[service.pricingUnit] ?? (service.pricingUnit ? `/ ${service.pricingUnit.replace('per_', '')}` : '/ event');
 
 
 

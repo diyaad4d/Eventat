@@ -41,6 +41,7 @@ const useCartStore = create(
        *   basePrice  : number,
        *   quantity?  : number,
        *   eventDate? : string | null,
+       *   specialRequests? : string | null,
        * }} item
        */
       addItem: (item) => {
@@ -48,7 +49,7 @@ const useCartStore = create(
         const existing = items.find((i) => i.serviceId === item.serviceId);
 
         if (existing) {
-          // Update the existing entry (e.g., new date or quantity)
+          // Update the existing entry (e.g., new date, quantity, special requests)
           set({
             items: items.map((i) =>
               i.serviceId === item.serviceId
@@ -56,6 +57,7 @@ const useCartStore = create(
                     ...i,
                     quantity: item.quantity ?? i.quantity,
                     eventDate: item.eventDate ?? i.eventDate,
+                    specialRequests: item.specialRequests ?? i.specialRequests,
                   }
                 : i,
             ),
@@ -72,6 +74,7 @@ const useCartStore = create(
                 basePrice: item.basePrice,
                 quantity: item.quantity ?? 1,
                 eventDate: item.eventDate ?? null,
+                specialRequests: item.specialRequests ?? null,
               },
             ],
           });

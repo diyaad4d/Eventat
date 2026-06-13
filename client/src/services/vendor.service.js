@@ -16,8 +16,8 @@ const vendorService = {
    * GET /vendors/:vendorId
    */
   getPublicProfile: async (vendorId) => {
-    const { data } = await api.get(`/vendors/${vendorId}`);
-    return data.data; // { profile }
+    const { data } = await api.get(`/vendors/${vendorId}/public`);
+    return data.data; // { vendor, services, reviews }
   },
 
   // ── Services ──────────────────────────────────────────────

@@ -6,12 +6,13 @@ import * as bookingsService from '../../services/bookings.service';
 import { toastSuccess, toastError } from '../../utils/toast';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-const TABS = ['All', 'Pending', 'Accepted', 'Rejected', 'Completed', 'Cancelled'];
+const TABS = ['All', 'Pending', 'Accepted', 'Paid', 'Rejected', 'Completed', 'Cancelled'];
 
 const TAB_STATUS_MAP = {
   'All':       undefined,
   'Pending':   'pending',
   'Accepted':  'accepted',
+  'Paid':      'paid',
   'Rejected':  'rejected',
   'Completed': 'completed',
   'Cancelled': 'cancelled',
@@ -183,9 +184,18 @@ function CustomerBookings() {
                         Cancel
                       </button>
                     )}
+                    {booking.status === 'accepted' && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-green-700">Go to My Events to pay</span>
+                      </div>
+                    )}
                     {booking.status === 'completed' && (
                       <Link
-                        to={`/services/${booking.service_id}#reviews`}
+                        to={`/service/${booking.service_id}#reviews`}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-[var(--color-dark)] hover:bg-[#1a1a1a] shadow-sm transition-colors"
                       >
                         Write a Review
@@ -219,7 +229,7 @@ function CustomerBookings() {
                       </div>
                     )}
                     <div className="sm:col-span-2 pt-3 mt-1 border-t border-gray-100">
-                      <Link to={`/services/${booking.service_id}`} className="text-[var(--color-gold)] font-bold hover:underline">
+                      <Link to={`/service/${booking.service_id}`} className="text-[var(--color-gold)] font-bold hover:underline">
                         View Service Page &rarr;
                       </Link>
                     </div>

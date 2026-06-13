@@ -15,8 +15,12 @@ const authMiddleware = (req, res, next) => {
     
     const decoded = jwt.verify(token, secret);
     
-    // Attach decoded user payload (usually contains id, role) to the request object
-    req.user = decoded;
+    // Normalize: jwt.sign uses { userId } (camelCase) but controllers read req.user.user_id (snake_case)
+    // Support both so existing tokens keep working.
+    req.user = {
+      ...decoded,
+      user_id: decoded.user_id ?? decoded.userId ?? null,
+    };
     
     next();
   } catch (err) {

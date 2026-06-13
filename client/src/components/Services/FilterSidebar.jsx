@@ -322,7 +322,7 @@ function FilterSidebar({ filters, onChange, onClear, onClose, lockedEventType })
 
   // ── Derived: which subcategories to show ──────────────────
   const activeSubcats = filters?.categories?.length === 1
-    ? categories.find(c => c.slug === filters.categories[0])?.subcategories?.filter(s => s.isActive).map(s => s.name) ?? []
+    ? categories.find(c => c.slug === filters.categories[0])?.subcategories?.filter(s => s.isActive)?.map(s => s.name) ?? []
     : [];
 
   // ── Helpers ───────────────────────────────────────────────

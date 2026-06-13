@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Calendar, Users, DollarSign, MessageSquare,
-  CheckCircle2, Clock, ChevronDown, ChevronUp, Search, XCircle, AlertTriangle,
+  CheckCircle2, Clock, ChevronDown, ChevronUp, Search, XCircle, AlertTriangle, Package
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import EmptyState from '../../components/shared/EmptyState';
@@ -17,6 +17,7 @@ import { toastSuccess, toastError } from '../../utils/toast';
 const TABS = [
   { label: 'Incoming',  apiStatus: 'pending'   },
   { label: 'Confirmed', apiStatus: 'accepted'  },
+  { label: 'Paid',      apiStatus: 'paid'      },
   { label: 'Completed', apiStatus: 'completed' },
   { label: 'Cancelled', apiStatus: 'rejected'  }, // includes both rejected + cancelled
 ];
@@ -87,6 +88,7 @@ function VendorBookings() {
   const tabCount = (tab) => {
     if (tab.apiStatus === 'pending')   return summary.pending   ?? 0;
     if (tab.apiStatus === 'accepted')  return summary.accepted  ?? 0;
+    if (tab.apiStatus === 'paid')      return summary.paid      ?? 0;
     if (tab.apiStatus === 'completed') return summary.completed ?? 0;
     if (tab.apiStatus === 'rejected')  return (summary.rejected ?? 0) + (summary.cancelled ?? 0);
     return 0;
@@ -214,12 +216,14 @@ function VendorBookings() {
             // Status display for non-incoming
             const STATUS_STYLE = {
               accepted:  'bg-green-50 text-green-700 border-green-200',
+              paid:      'bg-emerald-50 text-emerald-700 border-emerald-200',
               completed: 'bg-blue-50 text-blue-700 border-blue-200',
               rejected:  'bg-red-50 text-red-700 border-red-200',
               cancelled: 'bg-gray-100 text-gray-600 border-gray-200',
             };
             const STATUS_LABEL = {
               accepted:  'Confirmed',
+              paid:      'Paid',
               completed: 'Completed',
               rejected:  'Rejected',
               cancelled: 'Cancelled',
@@ -281,13 +285,31 @@ function VendorBookings() {
                           {booking.event_date ? new Date(booking.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Guest Count</p>
-                        <p className="font-medium text-gray-700 flex items-center gap-1.5">
-                          <Users size={16} className="text-gray-400" />
-                          {booking.guest_count ? `${booking.guest_count} Guests` : 'Not specified'}
-                        </p>
-                      </div>
+                      {booking.pricing_unit === 'per_item' ? (
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Piece Count</p>
+                          <p className="font-medium text-gray-700 flex items-center gap-1.5">
+                            <Package size={16} className="text-gray-400" />
+                            {booking.quantity ? `${booking.quantity} Pieces` : 'Not specified'}
+                          </p>
+                        </div>
+                      ) : booking.pricing_unit === 'per_person' ? (
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Guest Count</p>
+                          <p className="font-medium text-gray-700 flex items-center gap-1.5">
+                            <Users size={16} className="text-gray-400" />
+                            {booking.guest_count ? `${booking.guest_count} Guests` : 'Not specified'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Quantity</p>
+                          <p className="font-medium text-gray-700 flex items-center gap-1.5">
+                            <Calendar size={16} className="text-gray-400" />
+                            {booking.quantity ? `${booking.quantity}` : '1'}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Special Requests */}
                       {booking.special_requests && (

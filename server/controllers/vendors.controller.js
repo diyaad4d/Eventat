@@ -599,8 +599,8 @@ const getMyBookingRequests = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     // vendor_item_status ENUM values (from schema):
-    // 'pending','accepted','rejected','completed','cancelled'
-    const allowedStatuses = ['pending', 'accepted', 'rejected', 'completed', 'cancelled'];
+    // 'pending','accepted','rejected','paid','completed','cancelled'
+    const allowedStatuses = ['pending', 'accepted', 'rejected', 'paid', 'completed', 'cancelled'];
     if (status && !allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -636,6 +636,7 @@ const getMyBookingRequests = async (req, res, next) => {
         s.service_id,
         s.title                  AS service_title,
         s.city                   AS service_city,
+        s.pricing_unit,
         ${primaryImageSubquery('s')} AS service_image,
         ep.event_id              AS plan_id,
         ep.name                  AS plan_name,
@@ -668,7 +669,7 @@ const getMyBookingRequests = async (req, res, next) => {
       [vendorId]
     );
 
-    const summary = { pending: 0, accepted: 0, rejected: 0, completed: 0, cancelled: 0 };
+    const summary = { pending: 0, accepted: 0, paid: 0, rejected: 0, completed: 0, cancelled: 0 };
     summaryRes.rows.forEach(row => {
       if (summary.hasOwnProperty(row.status)) {
         summary[row.status] = parseInt(row.cnt);
@@ -748,7 +749,6 @@ const acceptBooking = async (req, res, next) => {
       [itemId]
     );
 
-    // Step 4: Notify customer (non-blocking)
     await sendNotification({
       userId: booking.customer_id,
       eventId: booking.event_id,
@@ -757,6 +757,18 @@ const acceptBooking = async (req, res, next) => {
       notificationType: 'booking_confirmed',
       actionUrl: '/customer/bookings',
     });
+
+    // Step 5: Check if plan is fully resolved
+    const pendingRes = await db.query(
+      `SELECT COUNT(*) AS cnt FROM event_plan_items WHERE event_id = $1 AND vendor_item_status = 'pending'`,
+      [booking.event_id]
+    );
+    if (parseInt(pendingRes.rows[0].cnt) === 0) {
+      await db.query(
+        `UPDATE event_plans SET status = 'confirmed', updated_at = NOW() WHERE event_id = $1 AND status = 'submitted'`,
+        [booking.event_id]
+      );
+    }
 
     return res.status(200).json({
       success: true,
@@ -835,6 +847,29 @@ const rejectBooking = async (req, res, next) => {
       actionUrl: '/customer/bookings',
     });
 
+    // Step 5: Check if plan is fully resolved
+    const pendingRes = await db.query(
+      `SELECT COUNT(*) AS cnt FROM event_plan_items WHERE event_id = $1 AND vendor_item_status = 'pending'`,
+      [booking.event_id]
+    );
+    if (parseInt(pendingRes.rows[0].cnt) === 0) {
+      const acceptedRes = await db.query(
+        `SELECT COUNT(*) AS cnt FROM event_plan_items WHERE event_id = $1 AND vendor_item_status = 'accepted'`,
+        [booking.event_id]
+      );
+      if (parseInt(acceptedRes.rows[0].cnt) > 0) {
+        await db.query(
+          `UPDATE event_plans SET status = 'confirmed', updated_at = NOW() WHERE event_id = $1 AND status = 'submitted'`,
+          [booking.event_id]
+        );
+      } else {
+        await db.query(
+          `UPDATE event_plans SET status = 'cancelled', updated_at = NOW() WHERE event_id = $1 AND status = 'submitted'`,
+          [booking.event_id]
+        );
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Booking rejected.',
@@ -873,7 +908,7 @@ const getVendorProfile = async (req, res, next) => {
          (SELECT COUNT(*) FROM event_plan_items epi
           JOIN services s ON epi.service_id = s.service_id
           WHERE s.vendor_id = u.user_id
-            AND epi.vendor_item_status = 'accepted') AS total_confirmed_bookings,
+            AND epi.vendor_item_status IN ('accepted', 'paid', 'completed')) AS total_confirmed_bookings,
          (SELECT COUNT(*) FROM event_plan_items epi
           JOIN services s ON epi.service_id = s.service_id
           WHERE s.vendor_id = u.user_id
@@ -1108,17 +1143,17 @@ const getVendorAnalytics = async (req, res, next) => {
     const [kpiRes, monthlyRes, ratingsRes, topServicesRes] = await Promise.all([
 
       // QUERY 1 — KPI totals
-      // vendor_item_status ENUM: 'pending','accepted','rejected','completed','cancelled'
+      // vendor_item_status ENUM: 'pending','accepted','rejected','paid','completed','cancelled'
       db.query(
         `SELECT
            COUNT(*)                                           AS total_bookings,
-           COUNT(CASE WHEN epi.vendor_item_status = 'accepted'  THEN 1 END) AS confirmed_bookings,
+           COUNT(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed') THEN 1 END) AS confirmed_bookings,
            COUNT(CASE WHEN epi.vendor_item_status = 'pending'   THEN 1 END) AS pending_bookings,
            COUNT(CASE WHEN epi.vendor_item_status = 'rejected'  THEN 1 END) AS rejected_bookings,
-           COALESCE(SUM(CASE WHEN epi.vendor_item_status = 'accepted'
+           COALESCE(SUM(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed')
                              THEN epi.unit_price_at_time * epi.quantity ELSE 0 END), 0) AS total_revenue,
            ROUND(
-             COUNT(CASE WHEN epi.vendor_item_status = 'accepted' THEN 1 END)::numeric
+             COUNT(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed') THEN 1 END)::numeric
              / NULLIF(COUNT(*), 0) * 100, 1
            ) AS acceptance_rate
          FROM event_plan_items epi
@@ -1134,8 +1169,9 @@ const getVendorAnalytics = async (req, res, next) => {
            EXTRACT(MONTH FROM epi.event_date)::int   AS month_num,
            EXTRACT(YEAR  FROM epi.event_date)::int   AS year,
            COUNT(*)                                  AS bookings_count,
-           COALESCE(SUM(epi.unit_price_at_time * epi.quantity), 0) AS revenue,
-           COUNT(CASE WHEN epi.vendor_item_status = 'accepted' THEN 1 END) AS confirmed_count
+           COALESCE(SUM(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed')
+                             THEN epi.unit_price_at_time * epi.quantity ELSE 0 END), 0) AS revenue,
+           COUNT(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed') THEN 1 END) AS confirmed_count
          FROM event_plan_items epi
          JOIN services s ON epi.service_id = s.service_id
          WHERE s.vendor_id = $1
@@ -1163,11 +1199,11 @@ const getVendorAnalytics = async (req, res, next) => {
            s.service_id,
            s.title,
            COUNT(epi.event_item_id)                                            AS bookings,
-           COALESCE(SUM(epi.unit_price_at_time * epi.quantity), 0)             AS revenue,
+           COALESCE(SUM(CASE WHEN epi.vendor_item_status IN ('accepted', 'paid', 'completed') THEN epi.unit_price_at_time * epi.quantity ELSE 0 END), 0) AS revenue,
            ROUND(COALESCE(AVG(r.rating), 0)::numeric, 1)                       AS rating
          FROM services s
          LEFT JOIN event_plan_items epi
-           ON s.service_id = epi.service_id AND epi.vendor_item_status = 'accepted'
+           ON s.service_id = epi.service_id AND epi.vendor_item_status IN ('accepted', 'paid', 'completed')
          LEFT JOIN reviews r ON s.service_id = r.service_id
          WHERE s.vendor_id = $1
          GROUP BY s.service_id, s.title
@@ -1318,6 +1354,99 @@ const requestPaymentChange = async (req, res, next) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// FUNCTION 16: GET /api/vendors/:id/public
+// Public profile for customers to view vendor details + their services
+// ---------------------------------------------------------------------------
+const getPublicVendorProfile = async (req, res, next) => {
+  try {
+    const vendorId = parseInt(req.params.id, 10);
+    
+    // 1. Fetch basic profile
+    const profileRes = await db.query(
+      `SELECT
+         u.user_id, u.full_name, u.created_at AS member_since,
+         vp.vendor_id, vp.company_name, vp.company_description,
+         vp.city, vp.logo_url, vp.social_links,
+         (SELECT COUNT(*) FROM event_plan_items epi
+          JOIN services s ON epi.service_id = s.service_id
+          WHERE s.vendor_id = u.user_id
+            AND epi.vendor_item_status = 'accepted') AS total_events_hosted
+       FROM users u
+       JOIN vendor_profiles vp ON u.user_id = vp.vendor_id
+       WHERE u.user_id = $1 AND u.role = 'vendor'`,
+      [vendorId]
+    );
+
+    if (profileRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Vendor not found.' });
+    }
+
+    // 2. Fetch vendor services
+    const servicesRes = await db.query(
+      `SELECT s.service_id, s.title, s.city, s.base_price, s.pricing_unit, s.avg_rating, s.review_count,
+              c.name AS category_name, c.slug AS category_slug,
+              vp.company_name AS vendor_name,
+              ${primaryImageSubquery('s')} AS primary_image
+       FROM services s
+       JOIN categories c ON s.category_id = c.category_id
+       JOIN vendor_profiles vp ON s.vendor_id = vp.vendor_id
+       WHERE s.vendor_id = $1 AND s.is_active = true
+       ORDER BY s.created_at DESC`,
+      [vendorId]
+    );
+
+    // 3. Fetch recent reviews across all their services
+    const reviewsRes = await db.query(
+      `SELECT
+         r.review_id, r.rating, r.review_text, r.created_at,
+         u.full_name AS reviewer_name, cp.avatar_url AS reviewer_avatar,
+         s.title AS service_title
+       FROM reviews r
+       JOIN services s ON r.service_id = s.service_id
+       JOIN users u ON r.customer_id = u.user_id
+       LEFT JOIN customer_profiles cp ON u.user_id = cp.customer_id
+       WHERE s.vendor_id = $1
+       ORDER BY r.created_at DESC`,
+      [vendorId]
+    );
+
+    const vendor = profileRes.rows[0];
+    const services = servicesRes.rows.map(s => ({
+      id: s.service_id,
+      title: s.title,
+      category: s.category_name,
+      categorySlug: s.category_slug,
+      vendorName: s.vendor_name,
+      location: s.city,
+      rating: parseFloat(s.avg_rating || 0),
+      reviewCount: parseInt(s.review_count || 0),
+      basePrice: parseFloat(s.base_price),
+      pricingUnit: s.pricing_unit,
+      image: s.primary_image || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80',
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        vendor,
+        services,
+        reviews: reviewsRes.rows.map(r => ({
+          id: r.review_id,
+          reviewerName: r.reviewer_name,
+          reviewerAvatar: r.reviewer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reviewer_name || 'User')}&background=E8C97A&color=fff`,
+          date: new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          rating: r.rating,
+          text: r.review_text,
+          service: r.service_title
+        }))
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   // Service management
   getMyServices,
@@ -1338,6 +1467,8 @@ module.exports = {
   getVendorAnalytics,
   getPaymentInfo,
   requestPaymentChange,
+  // Public
+  getPublicVendorProfile,
   // Multer instance exported for route middleware
   upload,
 };
